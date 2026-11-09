@@ -20,11 +20,10 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
         <button
           onClick={() => onTabChange('dashboard')}
           title="Wallet"
-          className={`p-1.5 rounded-full transition-all active:scale-90 ${
-            activeTab === 'dashboard'
+          className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'dashboard'
               ? 'text-white'
               : 'text-slate-400 hover:text-white'
-          }`}
+            }`}
         >
           <Wallet className="w-5 h-5 stroke-[2]" />
         </button>
@@ -32,11 +31,10 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
         <button
           onClick={onOpenSwap}
           title="Swap"
-          className={`p-1.5 rounded-full transition-all active:scale-90 ${
-            activeTab === 'swap'
+          className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'swap'
               ? 'text-white'
               : 'text-slate-400 hover:text-white'
-          }`}
+            }`}
         >
           <CircleDollarSign className="w-5 h-5 stroke-[2]" />
         </button>
@@ -44,11 +42,10 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
         <button
           onClick={() => onTabChange('profile')}
           title="Account"
-          className={`p-1.5 rounded-full transition-all active:scale-90 ${
-            activeTab === 'profile'
+          className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'profile'
               ? 'text-white'
               : 'text-slate-400 hover:text-white'
-          }`}
+            }`}
         >
           <User className="w-5 h-5 stroke-[2]" />
         </button>

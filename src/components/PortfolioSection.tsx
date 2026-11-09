@@ -36,7 +36,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       </div>
 
       <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar mb-3">
-        <div 
+        <div
           onClick={() => onSelectAssetForSwap(nimAsset)}
           className="w-32 h-[72px] rounded-2xl bg-[#1C1C1E] text-white p-2.5 flex flex-col justify-between shrink-0 shadow-sm cursor-pointer hover:bg-[#252528] transition-colors"
         >
@@ -65,7 +65,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
           </div>
         </div>
 
-        <div 
+        <div
           onClick={() => onSelectAssetForSwap(btcAsset)}
           className="h-[72px] rounded-2xl bg-white border border-slate-100 p-2.5 px-3 flex items-center gap-2.5 shrink-0 shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
         >
@@ -119,10 +119,10 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                 <img src={ethAsset.logoUrl} alt="ETH" className="w-full h-full object-contain rounded-full" />
               ) : (
                 <svg width="14" height="20" viewBox="0 0 784 1277" fill="none" className="text-slate-900">
-                  <path d="M392.07 0L383.5 29.11V874.74L392.07 883.31L784.13 651.54L392.07 0Z" fill="currentColor" fillOpacity="0.8"/>
-                  <path d="M392.07 0L0 651.54L392.07 883.31V472.93V0Z" fill="currentColor"/>
-                  <path d="M392.07 956.17L386.72 962.69V1271.8L392.07 1277.01L784.37 724.89L392.07 956.17Z" fill="currentColor" fillOpacity="0.8"/>
-                  <path d="M392.07 1277.01V956.17L0 724.89L392.07 1277.01Z" fill="currentColor"/>
+                  <path d="M392.07 0L383.5 29.11V874.74L392.07 883.31L784.13 651.54L392.07 0Z" fill="currentColor" fillOpacity="0.8" />
+                  <path d="M392.07 0L0 651.54L392.07 883.31V472.93V0Z" fill="currentColor" />
+                  <path d="M392.07 956.17L386.72 962.69V1271.8L392.07 1277.01L784.37 724.89L392.07 956.17Z" fill="currentColor" fillOpacity="0.8" />
+                  <path d="M392.07 1277.01V956.17L0 724.89L392.07 1277.01Z" fill="currentColor" />
                 </svg>
               )}
             </div>
@@ -147,14 +147,14 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                   className="rounded-2xl bg-white border border-slate-100 p-3.5 flex items-center justify-between shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-slate-100/80 bg-white overflow-hidden p-1 shadow-sm"
                       style={{ backgroundColor: `${asset.color}15` }}
                     >
                       {asset.logoUrl ? (
-                        <img 
-                          src={asset.logoUrl} 
-                          alt={asset.symbol} 
+                        <img
+                          src={asset.logoUrl}
+                          alt={asset.symbol}
                           className="w-full h-full object-contain rounded-full"
                           onError={(e) => {
                             (e.target as HTMLElement).style.display = 'none';
@@ -163,7 +163,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                           }}
                         />
                       ) : null}
-                      <span 
+                      <span
                         className="text-sm items-center justify-center"
                         style={{ display: asset.logoUrl ? 'none' : 'flex' }}
                       >

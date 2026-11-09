@@ -143,6 +143,30 @@ export async function executeNimTransfer(params: {
   throw new Error('Nimiq provider not found. Please open inside Nimiq Pay.');
 }
 
+const KNOWN_CHAINS: Record<number, any> = {
+  56: {
+    chainId: '0x38',
+    chainName: 'BNB Smart Chain',
+    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+    rpcUrls: ['https://bsc-dataseed.binance.org'],
+    blockExplorerUrls: ['https://bscscan.com'],
+  },
+  137: {
+    chainId: '0x89',
+    chainName: 'Polygon Mainnet',
+    nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+    rpcUrls: ['https://polygon-rpc.com'],
+    blockExplorerUrls: ['https://polygonscan.com'],
+  },
+  8453: {
+    chainId: '0x2105',
+    chainName: 'Base',
+    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://mainnet.base.org'],
+    blockExplorerUrls: ['https://basescan.org'],
+  },
+};
+
 export async function executeEvmTransaction(params: {
   to: string;
   data?: string;
@@ -151,16 +175,42 @@ export async function executeEvmTransaction(params: {
   chainId?: number;
 }): Promise<string> {
   if (typeof window !== 'undefined' && window.ethereum && typeof window.ethereum.request === 'function') {
-    // If a specific chain is requested and differs, switch network
+    // If a specific chain is requested, verify and switch network
     if (params.chainId) {
+      const hexChainId = '0x' + params.chainId.toString(16);
       try {
-        const hexChainId = '0x' + params.chainId.toString(16);
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: hexChainId }],
         });
       } catch (switchError: any) {
-        console.warn('Network switch prompt/error:', switchError);
+        // Error code 4902 indicates chain is not added to the wallet
+        if (switchError.code === 4902 && KNOWN_CHAINS[params.chainId]) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [KNOWN_CHAINS[params.chainId]],
+            });
+          } catch (addError) {
+            console.warn('wallet_addEthereumChain error:', addError);
+          }
+        } else {
+          console.warn('Network switch warning:', switchError);
+        }
+      }
+    }
+
+    // Ensure value is strictly formatted as valid Hex (e.g. 0x0 or 0x123)
+    let formattedValue = '0x0';
+    if (params.value && params.value !== '0') {
+      if (typeof params.value === 'string' && params.value.startsWith('0x')) {
+        formattedValue = params.value;
+      } else {
+        try {
+          formattedValue = '0x' + BigInt(params.value).toString(16);
+        } catch {
+          formattedValue = '0x0';
+        }
       }
     }
 
@@ -171,7 +221,7 @@ export async function executeEvmTransaction(params: {
           to: params.to,
           from: params.from,
           data: params.data || '0x',
-          value: params.value || '0x0',
+          value: formattedValue,
         },
       ],
     });
