@@ -56,11 +56,10 @@ export const ContractsDirectoryModal: React.FC<ContractsDirectoryModalProps> = (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
-              className={`py-1.5 px-3 rounded-xl text-xs font-bold capitalize transition-all whitespace-nowrap ${
-                filter === tab
+              className={`py-1.5 px-3 rounded-xl text-xs font-bold capitalize transition-all whitespace-nowrap ${filter === tab
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               {tab === 'stocks' ? 'Stocks & Metals' : tab === 'currencies' ? 'Currencies' : tab === 'crypto' ? 'Crypto' : 'All'}
             </button>
@@ -76,16 +75,16 @@ export const ContractsDirectoryModal: React.FC<ContractsDirectoryModalProps> = (
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-full bg-white border border-slate-200/80 overflow-hidden p-1 flex items-center justify-center shrink-0 shadow-sm"
                     style={{ backgroundColor: `${asset.color}10` }}
                   >
                     {asset.logoUrl ? (
-                      <img 
-                        src={asset.logoUrl} 
-                        alt={asset.symbol} 
-                        className="w-full h-full object-contain rounded-full" 
-                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} 
+                      <img
+                        src={asset.logoUrl}
+                        alt={asset.symbol}
+                        className="w-full h-full object-contain rounded-full"
+                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                       />
                     ) : (
                       <span className="text-xs">{asset.icon}</span>

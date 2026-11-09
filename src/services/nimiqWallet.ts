@@ -165,6 +165,27 @@ const KNOWN_CHAINS: Record<number, any> = {
     rpcUrls: ['https://mainnet.base.org'],
     blockExplorerUrls: ['https://basescan.org'],
   },
+  43114: {
+    chainId: '0xa86a',
+    chainName: 'Avalanche C-Chain',
+    nativeCurrency: { name: 'Avalanche', symbol: 'AVAX', decimals: 18 },
+    rpcUrls: ['https://api.avax.network/ext/bc/C/rpc'],
+    blockExplorerUrls: ['https://snowtrace.io'],
+  },
+  42161: {
+    chainId: '0xa4b1',
+    chainName: 'Arbitrum One',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+    blockExplorerUrls: ['https://arbiscan.io'],
+  },
+  10: {
+    chainId: '0xa',
+    chainName: 'OP Mainnet',
+    nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://mainnet.optimism.io'],
+    blockExplorerUrls: ['https://optimistic.etherscan.io'],
+  },
 };
 
 export async function executeEvmTransaction(params: {
