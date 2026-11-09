@@ -61,7 +61,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       </div>
 
       {/* Action Buttons Row */}
-      <div className="flex items-center justify-center gap-3.5 mt-5 mb-4">
+      <div className="flex items-center justify-center gap-3.5 mt-5 mb-2">
         {/* Receive Pill Button */}
         <button
           onClick={onOpenReceive}
@@ -87,18 +87,6 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         >
           <ArrowUpRight className="w-3.5 h-3.5 stroke-[2]" />
           <span>Send</span>
-        </button>
-      </div>
-
-      {/* Status Badge: • Synchronized / Syncing */}
-      <div className="flex justify-center mt-2">
-        <button
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2C2C2E] text-[11px] font-medium text-slate-300 hover:bg-[#38383A] active:scale-95 transition-all"
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${isRefreshing ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-          <span>{isRefreshing ? 'Syncing on-chain...' : 'Synchronized'}</span>
         </button>
       </div>
     </div>
