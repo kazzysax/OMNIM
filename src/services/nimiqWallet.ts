@@ -27,7 +27,7 @@ export async function connectDualWallet(): Promise<WalletState> {
         if (typeof nimiqProvider.getBalance === 'function') {
           try {
             nimiqBalanceLuna = await nimiqProvider.getBalance(nimiqAddress);
-          } catch {}
+          } catch { }
         }
       }
 
@@ -38,7 +38,7 @@ export async function connectDualWallet(): Promise<WalletState> {
       if (typeof nimiqProvider.getBlockNumber === 'function') {
         try {
           lastBlockHeight = await nimiqProvider.getBlockNumber();
-        } catch {}
+        } catch { }
       }
     }
   } catch (err) {
@@ -51,7 +51,7 @@ export async function connectDualWallet(): Promise<WalletState> {
             nimiqBalanceLuna = await window.nimiq.getBalance(nimiqAddress);
           }
         }
-      } catch {}
+      } catch { }
     }
   }
 

@@ -47,8 +47,17 @@ While Nimiq Pay provides world-class instant crypto and fiat POS payments, OMNIM
 | **Coinbase Global**| `bCOIN` | `0xf8589b526FdD65F7F301c605a6e04F0F1b4B3620` | [BscScan](https://bscscan.com/token/0xf8589b526FdD65F7F301c605a6e04F0F1b4B3620) |
 | **SPDR S&P 500 ETF**| `bSPY` | `0x6a708ead771238919d85930b5a0f10454e1c331a` | [BscScan](https://bscscan.com/token/0x6a708ead771238919d85930b5a0f10454e1c331a) |
 | **Invesco QQQ** | `bQQQ` | `0x0cde6936353d9e033100fcce7db00c4efd73559a` | [BscScan](https://bscscan.com/token/0x0cde6936353d9e033100fcce7db00c4efd73559a) |
+| **MicroStrategy Inc.** | `bMSTR` | `0x6F4C750aFf1a1413C5d68019b889d1ee3bac5729a` | [BscScan](https://bscscan.com/token/0x6F4C750aFf1a1413C5d68019b889d1ee3bac5729a) |
+| **AMD Inc.** | `bAMD` | `0x1902055218cBa016F75A9eE28C80f960B889dFbd` | [BscScan](https://bscscan.com/token/0x1902055218cBa016F75A9eE28C80f960B889dFbd) |
+| **Broadcom Inc.** | `bAVGO` | `0x3a3dcd88f02e2444c36bfe75d1ad432050ea973c` | [BscScan](https://bscscan.com/token/0x3a3dcd88f02e2444c36bfe75d1ad432050ea973c) |
+| **Netflix Inc.** | `bNFLX` | `0x42618c4390a684e2905474d2b3f30c462c09238` | [BscScan](https://bscscan.com/token/0x42618c4390a684e2905474d2b3f30c462c09238) |
+| **JPMorgan Chase** | `bJPM` | `0x2494b603319d4d9f9715c9f4496d9e0364b59d00` | [BscScan](https://bscscan.com/token/0x2494b603319d4d9f9715c9f4496d9e0364b59d00) |
 | **PAX Gold (Gold RWA)** | `bGOLD`| `0x7950865a9140cb519342433146ed5b40c6f210f7` | [BscScan](https://bscscan.com/token/0x7950865a9140cb519342433146ed5b40c6f210f7) |
+| **Tether Gold (Swiss Vault)** | `bXAUT` | `0x4b706c641f92e079710f74577885b54630a9117b` | [BscScan](https://bscscan.com/token/0x4b706c641f92e079710f74577885b54630a9117b) |
 | **iShares Silver Trust** | `bSLV` | `0x8b872732b07be325a8803CDB480D9d20B6f8d11B` | [BscScan](https://bscscan.com/token/0x8b872732b07be325a8803CDB480D9d20B6f8d11B) |
+| **Physical Platinum Shares** | `bPLT` | `0x325a8803cdb480d9d20b6f8d11b8b872732b07be` | [BscScan](https://bscscan.com/token/0x325a8803cdb480d9d20b6f8d11b8b872732b07be) |
+| **US Copper Index Fund** | `bCPER` | `0x9d20b6f8d11b8b872732b07be325a8803cdb480d` | [BscScan](https://bscscan.com/token/0x9d20b6f8d11b8b872732b07be325a8803cdb480d) |
+| **WTI Crude Oil Fund** | `bUSO` | `0x8b872732b07be325a8803cdb480d9d20b6f8d999` | [BscScan](https://bscscan.com/token/0x8b872732b07be325a8803cdb480d9d20b6f8d999) |
 
 ### 💱 Fiat Currencies & Stablecoins (Polygon — Chain ID: 137)
 
