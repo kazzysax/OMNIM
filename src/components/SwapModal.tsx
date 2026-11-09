@@ -33,7 +33,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   onSwapSuccess,
 }) => {
   const defaultFrom = initialFromAsset || assets.find((a) => a.symbol === 'USDC') || assets[0];
-  const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'bTSLA') || assets.find((a) => a.symbol === 'bGOLD') || assets[1];
+  const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'bTSLA') || assets.find((a) => a.symbol === 'bNVDA') || assets[1];
+
+  const polygonUsdc = assets.find((a) => a.id === 'usdc-polygon');
 
   const [fromAsset, setFromAsset] = useState<Asset>(defaultFrom);
   const [toAsset, setToAsset] = useState<Asset>(defaultTo);
@@ -204,6 +206,36 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           </div>
 
           <div className="mt-3 space-y-2">
+            {polygonUsdc && polygonUsdc.userBalance > 0 && fromAsset.id !== 'usdc-polygon' && (
+              <div className="p-2.5 rounded-xl bg-slate-100/90 border border-slate-200/80 flex items-center justify-between text-xs text-slate-700">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-900">Polygon USDC:</span>
+                  <span className="font-mono text-emerald-600 font-bold">{polygonUsdc.userBalance.toFixed(4)}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFromAsset(polygonUsdc);
+                    setFromAmount(polygonUsdc.userBalance.toString());
+                  }}
+                  className="px-2 py-0.5 rounded-md bg-white border border-slate-300 text-slate-900 font-bold text-[11px] shadow-sm hover:bg-slate-50 transition-colors"
+                >
+                  Pay with USDC
+                </button>
+              </div>
+            )}
+
+            {(fromAsset.symbol === 'NIM' || toAsset.symbol === 'NIM') && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-[11px] space-y-1">
+                <div className="font-bold flex items-center gap-1 text-amber-900">
+                  <span>ℹ️ Nimiq (NIM) Swapping</span>
+                </div>
+                <p className="leading-snug text-amber-800">
+                  Native NIM is on the Nimiq L1 blockchain. Relay Protocol routes EVM assets across Polygon, BSC, and Base. To swap between NIM and EVM tokens, use the official Nimiq Pay or Nimiq Wallet app.
+                </p>
+              </div>
+            )}
+
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
                 <span>You Pay</span>
@@ -249,7 +281,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               </div>
 
               <div className="mt-1 text-[11px] text-slate-400 font-medium">
-                ≈ ${(parsedFromAmount * fromAsset.priceUsd).toFixed(2)} USD ({fromAsset.chain})
+                ≈ ${quote?.fromAmountUsd ? quote.fromAmountUsd.toFixed(2) : (parsedFromAmount * fromAsset.priceUsd).toFixed(2)} USD ({fromAsset.chain})
               </div>
             </div>
 
@@ -309,7 +341,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               </div>
 
               <div className="mt-1 text-[11px] text-slate-400 font-medium">
-                ≈ ${(parseFloat(quote?.toAmount || '0') * toAsset.priceUsd).toFixed(2)} USD ({toAsset.chain})
+                ≈ ${quote?.toAmountUsd ? quote.toAmountUsd.toFixed(2) : (parseFloat(quote?.toAmount || '0') * toAsset.priceUsd).toFixed(2)} USD ({toAsset.chain})
               </div>
             </div>
 
@@ -335,7 +367,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Price Impact</span>
+                  <span>DEX Price Impact</span>
                   <span className={`font-mono font-medium ${quote.priceImpact > 3 ? 'text-amber-600' : 'text-slate-700'}`}>
                     {quote.priceImpact < 0.01 ? '< 0.01%' : `${quote.priceImpact.toFixed(2)}%`}
                   </span>
@@ -350,6 +382,12 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   <span>Min. Received</span>
                   <span className="font-mono text-slate-700">{quote.minReceived} {toAsset.symbol}</span>
                 </div>
+              </div>
+            )}
+
+            {quote && quote.relayFeeUsd > 0 && (quote.relayFeeUsd / (quote.fromAmountUsd || 1)) > 0.08 && (
+              <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/60 text-blue-900 text-[11px] leading-relaxed">
+                <span className="font-bold">Micro-Swap Notice:</span> Cross-chain bridging ({fromAsset.chain} ➔ {toAsset.chain}) incurs a fixed base relayer fee (~${quote.relayFeeUsd.toFixed(3)}). On small trades (&lt; $1), this fixed fee represents a larger percentage. Swapping slightly larger amounts reduces the relative fee impact.
               </div>
             )}
 
@@ -406,6 +444,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         onSelect={setFromAsset}
         title="Pay With"
         excludeAssetId={toAsset.id}
+        isSwapContext={true}
       />
 
       <AssetSelectorModal
@@ -416,6 +455,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         onSelect={setToAsset}
         title="Receive Asset"
         excludeAssetId={fromAsset.id}
+        isSwapContext={true}
       />
     </>
   );

@@ -23,42 +23,45 @@ export async function getSwapQuote(
     return createEmptyQuote(fromAsset, toAsset);
   }
 
-  const isTwoStepNIM = fromAsset.symbol === 'NIM';
-  const fromValueUsd = parsedFromAmount * fromAsset.priceUsd;
-
-  let originChainId = fromAsset.chainId;
-  let originCurrency = fromAsset.contractAddress.startsWith('0x')
-    ? fromAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
-
-  let relayAmount = toAtomicUnits(parsedFromAmount, fromAsset.decimals);
-
-  if (isTwoStepNIM) {
-    // Leg 1: NIM -> Polygon USDC (Fastspot anchor)
-    // Leg 2: Polygon USDC -> Destination Asset via Relay Link
-    originChainId = 137;
-    originCurrency = POLYGON_USDC_ADDRESS;
-    relayAmount = Math.floor(fromValueUsd * 1_000_000).toString();
+  // 1. Guard against native NIM on EVM Relay Protocol
+  if (fromAsset.symbol === 'NIM' || toAsset.symbol === 'NIM') {
+    throw new Error(
+      'Native NIM operates on the Nimiq Layer-1 network. Relay Protocol routes EVM-to-EVM assets (Polygon, BSC, Base, Arbitrum). To swap to/from native NIM, use the official Nimiq Wallet or Nimiq Pay.'
+    );
   }
 
-  let destinationChainId = toAsset.chainId === 0 ? 137 : toAsset.chainId;
-  let destinationCurrency = toAsset.contractAddress.startsWith('0x')
-    ? toAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
-
-  if (toAsset.symbol === 'NIM') {
-    // Swapping to NIM: Relay routes into Polygon USDC which bridges to NIM via Fastspot
-    destinationChainId = 137;
-    destinationCurrency = POLYGON_USDC_ADDRESS;
+  // 2. Guard against assets with no active DEX liquidity pool
+  if (toAsset.hasSwapLiquidity === false) {
+    throw new Error(
+      `${toAsset.symbol} does not currently have active DEX liquidity on Relay Protocol (${toAsset.chain}). Live liquid assets include TSLA, NVDA, MSFT, AMZN, USDT, USDC, POL, BNB, ETH, and CAKE.`
+    );
+  }
+  if (fromAsset.hasSwapLiquidity === false) {
+    throw new Error(
+      `${fromAsset.symbol} does not currently have active DEX liquidity on Relay Protocol (${fromAsset.chain}).`
+    );
   }
 
-  // Prevent same-token send error on Relay
+  // 3. Prevent same-token swap error on Relay
   if (
-    originChainId === destinationChainId &&
-    originCurrency.toLowerCase() === destinationCurrency.toLowerCase()
+    fromAsset.id === toAsset.id ||
+    (fromAsset.chainId === toAsset.chainId &&
+      fromAsset.contractAddress.toLowerCase() === toAsset.contractAddress.toLowerCase())
   ) {
     throw new Error('Cannot swap an asset for itself. Please choose a different destination asset.');
   }
+
+  const originChainId = fromAsset.chainId;
+  const originCurrency = fromAsset.contractAddress.startsWith('0x')
+    ? fromAsset.contractAddress
+    : '0x0000000000000000000000000000000000000000';
+
+  const destinationChainId = toAsset.chainId;
+  const destinationCurrency = toAsset.contractAddress.startsWith('0x')
+    ? toAsset.contractAddress
+    : '0x0000000000000000000000000000000000000000';
+
+  const relayAmount = toAtomicUnits(parsedFromAmount, fromAsset.decimals);
 
   let relayQuoteData: any = null;
   let formattedToAmount = '';
@@ -145,46 +148,35 @@ export async function getSwapQuote(
     ? (parseFloat(relayQuoteData.details.currencyOut.minimumAmount) / Math.pow(10, toAsset.decimals)).toFixed(numToAmount > 10 ? 2 : 5)
     : (numToAmount * 0.995).toFixed(numToAmount > 10 ? 2 : 5);
 
+  const fromAmountUsd = relayQuoteData.details?.currencyIn?.amountUsd
+    ? parseFloat(relayQuoteData.details.currencyIn.amountUsd)
+    : parsedFromAmount * fromAsset.priceUsd;
+
+  const toAmountUsd = relayQuoteData.details?.currencyOut?.amountUsd
+    ? parseFloat(relayQuoteData.details.currencyOut.amountUsd)
+    : numToAmount * toAsset.priceUsd;
+
   const steps: RouteStep[] = [];
-  if (isTwoStepNIM) {
+  if (relayQuoteData.steps && Array.isArray(relayQuoteData.steps)) {
+    relayQuoteData.steps.forEach((s: any, idx: number) => {
+      steps.push({
+        step: idx + 1,
+        title: s.description || `Relay Step ${idx + 1}`,
+        description: s.action || `Execute transaction on ${fromAsset.chain}`,
+        protocol: 'Relay Protocol',
+        status: 'pending',
+        chainName: fromAsset.chain,
+      });
+    });
+  } else {
     steps.push({
       step: 1,
-      title: 'Leg 1: NIM ➔ Polygon USDC',
-      description: `Atomic swap of ${parsedFromAmount.toLocaleString()} NIM to ~$${fromValueUsd.toFixed(2)} USDC via Nimiq Fastspot`,
-      protocol: 'Nimiq FastSpot',
-      status: 'pending',
-      chainName: 'Nimiq',
-    });
-    steps.push({
-      step: 2,
-      title: `Leg 2: Relay Bridge ➔ ${toAsset.name} (${toAsset.chain})`,
-      description: `Relay Link execution on ${toAsset.chain} delivering ${toAsset.symbol}`,
+      title: `Relay Swap (${fromAsset.symbol} ➔ ${toAsset.symbol})`,
+      description: `Direct Mainnet execution on ${toAsset.chain}`,
       protocol: 'Relay Protocol',
       status: 'pending',
       chainName: toAsset.chain,
     });
-  } else {
-    if (relayQuoteData.steps && Array.isArray(relayQuoteData.steps)) {
-      relayQuoteData.steps.forEach((s: any, idx: number) => {
-        steps.push({
-          step: idx + 1,
-          title: s.description || `Relay Step ${idx + 1}`,
-          description: s.action || `Execute transaction on ${fromAsset.chain}`,
-          protocol: 'Relay Protocol',
-          status: 'pending',
-          chainName: fromAsset.chain,
-        });
-      });
-    } else {
-      steps.push({
-        step: 1,
-        title: `Relay Swap (${fromAsset.symbol} ➔ ${toAsset.symbol})`,
-        description: `Direct Mainnet execution on ${toAsset.chain}`,
-        protocol: 'Relay Protocol',
-        status: 'pending',
-        chainName: toAsset.chain,
-      });
-    }
   }
 
   return {
@@ -197,10 +189,12 @@ export async function getSwapQuote(
     relayFeeUsd,
     estimatedGasUsd,
     estimatedTimeSeconds: timeEstimate,
-    isTwoStepNIM,
+    isTwoStepNIM: false,
     steps,
     minReceived,
     relayTxData: relayQuoteData?.steps || null,
+    fromAmountUsd,
+    toAmountUsd,
   };
 }
 
@@ -218,5 +212,7 @@ function createEmptyQuote(fromAsset: Asset, toAsset: Asset): SwapQuote {
     isTwoStepNIM: fromAsset.symbol === 'NIM',
     steps: [],
     minReceived: '0',
+    fromAmountUsd: 0,
+    toAmountUsd: 0,
   };
 }

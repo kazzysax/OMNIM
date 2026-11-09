@@ -19,6 +19,8 @@ export interface Asset {
   explorerUrl: string;
   description: string;
   sparkline?: number[];
+  hasSwapLiquidity?: boolean;
+  liquidityNote?: string;
 }
 
 export interface RouteStep {
@@ -44,6 +46,9 @@ export interface SwapQuote {
   isTwoStepNIM: boolean;
   steps: RouteStep[];
   minReceived: string;
+  relayTxData?: any;
+  fromAmountUsd?: number;
+  toAmountUsd?: number;
 }
 
 export interface WalletState {

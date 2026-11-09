@@ -128,7 +128,7 @@ export default function App() {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 2500);
           const priceRes = await fetch(
-            'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true',
+            'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,polygon-ecosystem-token,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true',
             { signal: controller.signal }
           );
           clearTimeout(timeoutId);
@@ -169,10 +169,13 @@ export default function App() {
               if (typeof currentPrices.binancecoin.usd_24h_change === 'number') {
                 updatedChange = parseFloat(currentPrices.binancecoin.usd_24h_change.toFixed(2));
               }
-            } else if (asset.symbol === 'POL' && currentPrices['matic-network']?.usd) {
-              updatedPrice = currentPrices['matic-network'].usd;
-              if (typeof currentPrices['matic-network'].usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices['matic-network'].usd_24h_change.toFixed(2));
+            } else if (asset.symbol === 'POL') {
+              const polPriceObj = currentPrices['polygon-ecosystem-token'] || currentPrices['matic-network'];
+              if (polPriceObj?.usd) {
+                updatedPrice = polPriceObj.usd;
+                if (typeof polPriceObj.usd_24h_change === 'number') {
+                  updatedChange = parseFloat(polPriceObj.usd_24h_change.toFixed(2));
+                }
               }
             } else if (asset.symbol === 'WBTC' && currentPrices.bitcoin?.usd) {
               updatedPrice = currentPrices.bitcoin.usd;
