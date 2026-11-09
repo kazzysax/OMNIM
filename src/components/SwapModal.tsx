@@ -225,17 +225,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               </div>
             )}
 
-            {(fromAsset.symbol === 'NIM' || toAsset.symbol === 'NIM') && (
-              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 text-[11px] space-y-1">
-                <div className="font-bold flex items-center gap-1 text-amber-900">
-                  <span>ℹ️ Nimiq (NIM) Swapping</span>
-                </div>
-                <p className="leading-snug text-amber-800">
-                  Native NIM is on the Nimiq L1 blockchain. Relay Protocol routes EVM assets across Polygon, BSC, and Base. To swap between NIM and EVM tokens, use the official Nimiq Pay or Nimiq Wallet app.
-                </p>
-              </div>
-            )}
-
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
                 <span>You Pay</span>
@@ -382,12 +371,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   <span>Min. Received</span>
                   <span className="font-mono text-slate-700">{quote.minReceived} {toAsset.symbol}</span>
                 </div>
-              </div>
-            )}
-
-            {quote && quote.relayFeeUsd > 0 && (quote.relayFeeUsd / (quote.fromAmountUsd || 1)) > 0.08 && (
-              <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/60 text-blue-900 text-[11px] leading-relaxed">
-                <span className="font-bold">Micro-Swap Notice:</span> Cross-chain bridging ({fromAsset.chain} ➔ {toAsset.chain}) incurs a fixed base relayer fee (~${quote.relayFeeUsd.toFixed(3)}). On small trades (&lt; $1), this fixed fee represents a larger percentage. Swapping slightly larger amounts reduces the relative fee impact.
               </div>
             )}
 

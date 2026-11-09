@@ -87,16 +87,9 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
         </div>
 
         {/* Asset List */}
-        {isSwapContext && activeTab === 'stocks' && (
-          <div className="mb-2 p-2 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-900 leading-tight">
-            <span className="font-bold">Live Liquid Stocks:</span> Relay currently routes <span className="font-bold">bTSLA, bNVDA, bMSFT, and bAMZN</span>. Other equities are held in catalog custody pending DEX pool indexation.
-          </div>
-        )}
-
         <div className="flex-1 overflow-y-auto space-y-2 pr-1 -mr-1 py-1">
           {filteredAssets.map((asset) => {
             const isSelected = asset.id === selectedAsset.id;
-            const isIlliquidInSwap = isSwapContext && asset.hasSwapLiquidity === false;
 
             return (
               <button
@@ -108,9 +101,7 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                 className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all text-left ${
                   isSelected
                     ? 'bg-amber-50/70 border border-amber-300/80 shadow-sm'
-                    : isIlliquidInSwap
-                      ? 'bg-slate-50/60 hover:bg-slate-100/80 border border-slate-100 opacity-80'
-                      : 'bg-slate-50 hover:bg-slate-100/80 border border-slate-100'
+                    : 'bg-slate-50 hover:bg-slate-100/80 border border-slate-100'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -146,17 +137,6 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                       <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono font-medium">
                         {asset.chain}
                       </span>
-                      {isSwapContext && (
-                        asset.hasSwapLiquidity === false ? (
-                          <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-amber-100/80 text-amber-800">
-                            No DEX Pool
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800">
-                            Live Swap
-                          </span>
-                        )
-                      )}
                     </div>
                     <div className="text-xs text-slate-500 truncate max-w-[170px]">
                       {asset.name}
