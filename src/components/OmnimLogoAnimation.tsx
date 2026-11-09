@@ -119,3 +119,4 @@ export const OmnimLogoAnimation: React.FC<OmnimLogoAnimationProps> = ({
     </div>
   );
 };
+
