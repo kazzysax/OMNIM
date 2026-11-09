@@ -340,7 +340,7 @@ export const INITIAL_ASSETS: Asset[] = [
     contractAddress: '0x0f85ce675c9603099ac9f417f694e99f57ebbf23',
     decimals: 18,
     icon: '💷',
-    logoUrl: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://poundtoken.io&size=128',
+    logoUrl: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://bankofengland.co.uk&size=128',
     color: '#C8102E',
     priceUsd: 1.30,
     change24h: 0.12,

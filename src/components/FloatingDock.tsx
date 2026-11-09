@@ -1,7 +1,7 @@
 import React from 'react';
-import { Wallet, CircleDollarSign, Database, User } from 'lucide-react';
+import { Wallet, CircleDollarSign, User } from 'lucide-react';
 
-export type ActiveTab = 'dashboard' | 'portfolio' | 'swap' | 'profile';
+export type ActiveTab = 'dashboard' | 'swap' | 'profile';
 
 interface FloatingDockProps {
   activeTab: ActiveTab;
@@ -16,7 +16,7 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
 }) => {
   return (
     <div className="fixed bottom-[max(20px,calc(14px+env(safe-area-inset-bottom)))] left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-      <nav className="flex items-center gap-5 px-6 py-3 rounded-full bg-[#1C1C1E] shadow-2xl shadow-black/50 border border-white/10">
+      <nav className="flex items-center gap-7 px-7 py-3 rounded-full bg-[#1C1C1E] shadow-2xl shadow-black/50 border border-white/10">
         <button
           onClick={() => onTabChange('dashboard')}
           title="Wallet"
@@ -27,18 +27,6 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           }`}
         >
           <Wallet className="w-5 h-5 stroke-[2]" />
-        </button>
-
-        <button
-          onClick={() => onTabChange('portfolio')}
-          title="Assets"
-          className={`p-1.5 rounded-full transition-all active:scale-90 ${
-            activeTab === 'portfolio'
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
-          }`}
-        >
-          <Database className="w-5 h-5 stroke-[2]" />
         </button>
 
         <button
@@ -68,3 +56,4 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
     </div>
   );
 };
+
