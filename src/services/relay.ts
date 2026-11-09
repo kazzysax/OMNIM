@@ -24,8 +24,6 @@ export async function getSwapQuote(
   }
 
   const isTwoStepNIM = fromAsset.symbol === 'NIM';
-  const isFromBnbStock = fromAsset.category === 'stocks' && fromAsset.chainId === 56;
-  const isToBnbStock = toAsset.category === 'stocks' && toAsset.chainId === 56;
   const fromValueUsd = parsedFromAmount * fromAsset.priceUsd;
 
   let originChainId = fromAsset.chainId;
@@ -36,16 +34,11 @@ export async function getSwapQuote(
   let relayAmount = toAtomicUnits(parsedFromAmount, fromAsset.decimals);
 
   if (isTwoStepNIM) {
-    // Leg 1: NIM -> Polygon USDC (Fastspot / Oasis anchor)
+    // Leg 1: NIM -> Polygon USDC (Fastspot anchor)
     // Leg 2: Polygon USDC -> Destination Asset via Relay Link
     originChainId = 137;
     originCurrency = POLYGON_USDC_ADDRESS;
     relayAmount = Math.floor(fromValueUsd * 1_000_000).toString();
-  } else if (isFromBnbStock) {
-    // Selling BNB tokenized stock/commodity: routes via BSC-USD
-    originChainId = 56;
-    originCurrency = BSC_USD_ADDRESS;
-    relayAmount = Math.floor(fromValueUsd * 1e18).toString();
   }
 
   let destinationChainId = toAsset.chainId === 0 ? 137 : toAsset.chainId;
@@ -53,10 +46,7 @@ export async function getSwapQuote(
     ? toAsset.contractAddress
     : '0x0000000000000000000000000000000000000000';
 
-  if (isToBnbStock) {
-    // Buying BNB tokenized stock/commodity: Relay routes into BSC-USD on BNB Chain
-    destinationCurrency = BSC_USD_ADDRESS;
-  } else if (toAsset.symbol === 'NIM') {
+  if (toAsset.symbol === 'NIM') {
     // Swapping to NIM: Relay routes into Polygon USDC which bridges to NIM via Fastspot
     destinationChainId = 137;
     destinationCurrency = POLYGON_USDC_ADDRESS;
@@ -100,7 +90,16 @@ export async function getSwapQuote(
       errorJson.errorCode === 'INVALID_INPUT_CURRENCY'
     ) {
       throw new Error(
-        `Relay Protocol does not currently have active DEX liquidity for ${toAsset.symbol} on ${toAsset.chain}. Please select USDC, USDT, POL, BNB, ETH, or one of the BNB Chain stocks.`
+        `Relay Protocol currently does not have active DEX liquidity for ${toAsset.symbol} on ${toAsset.chain}. Live liquid assets include TSLA, NVDA, MSFT, USDT, USDC, POL, BNB, ETH, and CAKE.`
+      );
+    }
+
+    if (
+      rawError.toLowerCase().includes('fee exceeds') ||
+      rawError.toLowerCase().includes('amount too low')
+    ) {
+      throw new Error(
+        'Swap amount is too small to cover cross-chain relayer gas fees. Please try swapping at least ~$0.50.'
       );
     }
 
@@ -119,18 +118,21 @@ export async function getSwapQuote(
   if (relayQuoteData.fees?.relayer?.amountUsd) {
     relayFeeUsd = parseFloat(relayQuoteData.fees.relayer.amountUsd) || 0;
   }
-  if (relayQuoteData.details?.totalImpact?.percent) {
+
+  // Pure AMM DEX Swap Impact (slippage vs pool depth)
+  // This avoids conflating fixed cross-chain relayer gas fees with price impact
+  if (relayQuoteData.details?.swapImpact?.percent) {
+    priceImpact = Math.abs(parseFloat(relayQuoteData.details.swapImpact.percent)) || 0;
+  } else if (relayQuoteData.details?.totalImpact?.percent) {
     priceImpact = Math.abs(parseFloat(relayQuoteData.details.totalImpact.percent)) || 0;
   }
+
   if (relayQuoteData.details?.timeEstimate) {
     timeEstimate = relayQuoteData.details.timeEstimate + (isTwoStepNIM ? 10 : 0);
   }
 
-  if (isToBnbStock) {
-    const totalUsdOut = parseFloat(relayQuoteData.details?.currencyOut?.amountFormatted || fromValueUsd.toString());
-    const units = totalUsdOut / toAsset.priceUsd;
-    formattedToAmount = units > 1000 ? units.toFixed(2) : units > 1 ? units.toFixed(4) : units.toFixed(6);
-  } else if (relayQuoteData.details?.currencyOut?.amountFormatted) {
+  // 100% Genuine, on-chain executable output amount directly from Relay DEX router
+  if (relayQuoteData.details?.currencyOut?.amountFormatted) {
     const outNum = parseFloat(relayQuoteData.details.currencyOut.amountFormatted);
     formattedToAmount = outNum > 1000 ? outNum.toFixed(2) : outNum > 1 ? outNum.toFixed(4) : outNum.toFixed(6);
   } else {
@@ -155,28 +157,11 @@ export async function getSwapQuote(
     });
     steps.push({
       step: 2,
-      title: `Leg 2: Relay Bridge ➔ ${toAsset.name} (BNB Chain)`,
-      description: `Relay Link execution on BNB Smart Chain delivering ${toAsset.symbol}`,
+      title: `Leg 2: Relay Bridge ➔ ${toAsset.name} (${toAsset.chain})`,
+      description: `Relay Link execution on ${toAsset.chain} delivering ${toAsset.symbol}`,
       protocol: 'Relay Protocol',
       status: 'pending',
-      chainName: 'BNB Smart Chain',
-    });
-  } else if (isToBnbStock) {
-    steps.push({
-      step: 1,
-      title: `Relay Bridge (${fromAsset.symbol} ➔ BNB Smart Chain)`,
-      description: `Cross-chain execution settling on BNB Smart Chain (Chain ID: 56)`,
-      protocol: 'Relay Protocol',
-      status: 'pending',
-      chainName: 'BNB Smart Chain',
-    });
-    steps.push({
-      step: 2,
-      title: `Acquire ${toAsset.symbol} on BNB Chain`,
-      description: `Credit ${formattedToAmount} ${toAsset.symbol} shares to your BNB address`,
-      protocol: 'BNB Smart Chain (BEP-20)',
-      status: 'pending',
-      chainName: 'BNB Smart Chain',
+      chainName: toAsset.chain,
     });
   } else {
     if (relayQuoteData.steps && Array.isArray(relayQuoteData.steps)) {

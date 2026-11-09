@@ -99,8 +99,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     ? fromAsset.chainId === 137
       ? 0.08 // Polygon: reserve 0.08 POL
       : fromAsset.chainId === 56
-      ? 0.002 // BSC: reserve 0.002 BNB
-      : 0.001 // Base/Arb/OP/AVAX
+        ? 0.002 // BSC: reserve 0.002 BNB
+        : 0.001 // Base/Arb/OP/AVAX
     : 0;
 
   const maxSpendable = isNativePaying
@@ -150,7 +150,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               if (txHash) {
                 const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
                 setExecutionStatusText(`Transaction broadcasted (${shortHash}). Waiting for on-chain block confirmation...`);
-                
+
                 // 1. Wait for block inclusion on origin chain
                 await waitForEvmReceipt(txHash, fromAsset.chainId);
 
@@ -336,9 +336,19 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Price Impact</span>
-                  <span className={`font-mono ${quote.priceImpact > 2 ? 'text-amber-600' : 'text-slate-700'}`}>
-                    {quote.priceImpact.toFixed(2)}%
+                  <span className={`font-mono font-medium ${quote.priceImpact > 3 ? 'text-amber-600' : 'text-slate-700'}`}>
+                    {quote.priceImpact < 0.01 ? '< 0.01%' : `${quote.priceImpact.toFixed(2)}%`}
                   </span>
+                </div>
+                {quote.relayFeeUsd > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span>Relayer / Bridge Gas</span>
+                    <span className="font-mono text-slate-700">≈ ${quote.relayFeeUsd.toFixed(3)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span>Min. Received</span>
+                  <span className="font-mono text-slate-700">{quote.minReceived} {toAsset.symbol}</span>
                 </div>
               </div>
             )}
