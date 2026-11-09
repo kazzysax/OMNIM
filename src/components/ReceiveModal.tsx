@@ -40,17 +40,15 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, wal
         <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl my-3 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('evm')}
-            className={`py-1.5 rounded-lg transition-all ${
-              activeTab === 'evm' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-            }`}
+            className={`py-1.5 rounded-lg transition-all ${activeTab === 'evm' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
           >
             EVM (BNB Chain, Polygon, Base)
           </button>
           <button
             onClick={() => setActiveTab('nimiq')}
-            className={`py-1.5 rounded-lg transition-all ${
-              activeTab === 'nimiq' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
-            }`}
+            className={`py-1.5 rounded-lg transition-all ${activeTab === 'nimiq' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
           >
             Nimiq (NIM)
           </button>

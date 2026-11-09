@@ -88,13 +88,13 @@ export async function connectDualWallet(): Promise<WalletState> {
   };
 }
 
-const CHAIN_RPC_MAP: Record<number, string[]> = {
-  56: ['https://bsc.publicnode.com', 'https://binance.llamarpc.com'],
-  137: ['https://polygon-bor-rpc.publicnode.com', 'https://polygon-rpc.com'],
-  8453: ['https://mainnet.base.org'],
+export const CHAIN_RPC_MAP: Record<number, string[]> = {
+  56: ['https://bsc.publicnode.com', 'https://1rpc.io/bnb'],
+  137: ['https://polygon-bor-rpc.publicnode.com', 'https://1rpc.io/matic'],
+  8453: ['https://mainnet.base.org', 'https://1rpc.io/base'],
   42161: ['https://arbitrum-one-rpc.publicnode.com', 'https://arb1.arbitrum.io/rpc'],
-  10: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
-  43114: ['https://avalanche-c-chain-rpc.publicnode.com', 'https://api.avax.network/ext/bc/C/rpc'],
+  10: ['https://optimism-rpc.publicnode.com'],
+  43114: ['https://avalanche-c-chain-rpc.publicnode.com'],
 };
 
 export async function fetchRealEvmBalance(
@@ -105,36 +105,39 @@ export async function fetchRealEvmBalance(
 ): Promise<number> {
   if (!userAddress) return 0;
 
-  const isNative = !tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000';
+  const isNative =
+    !tokenAddress ||
+    tokenAddress === '0x0000000000000000000000000000000000000000' ||
+    tokenAddress === '0x0000000000000000000000000000000000001010';
+
+  const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+  const payload = isNative
+    ? {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getBalance',
+        params: [userAddress, 'latest'],
+      }
+    : {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: [
+          {
+            to: tokenAddress,
+            data: '0x70a08231' + cleanAddr,
+          },
+          'latest',
+        ],
+      };
+
   const rpcs = CHAIN_RPC_MAP[chainId] || [];
 
-  // 1. Direct multi-chain JSON-RPC query: accurately reaches BNB Chain, Polygon, Base, Arbitrum, etc.
-  for (const rpcUrl of rpcs) {
+  // Fast fetch function with 2200ms timeout
+  const fetchSingleRpc = async (rpcUrl: string): Promise<number> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2200);
     try {
-      const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-      const payload = isNative
-        ? {
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'eth_getBalance',
-            params: [userAddress, 'latest'],
-          }
-        : {
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'eth_call',
-            params: [
-              {
-                to: tokenAddress,
-                data: '0x70a08231' + cleanAddr,
-              },
-              'latest',
-            ],
-          };
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
       const res = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,8 +155,19 @@ export async function fetchRealEvmBalance(
           return 0;
         }
       }
+      throw new Error(`RPC bad response from ${rpcUrl}`);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
+    }
+  };
+
+  // 1. Race all active public RPC endpoints in parallel for instantaneous result
+  if (rpcs.length > 0) {
+    try {
+      return await Promise.any(rpcs.map((url) => fetchSingleRpc(url)));
     } catch {
-      // Continue to next RPC or fallback
+      // All RPCs in Promise.any failed, fall through to window.ethereum
     }
   }
 
@@ -170,15 +184,12 @@ export async function fetchRealEvmBalance(
           return Number(balanceWei) / Math.pow(10, decimals);
         }
       } else {
-        const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-        const data = '0x70a08231' + cleanAddr;
-
         const balanceHex = await window.ethereum.request({
           method: 'eth_call',
           params: [
             {
               to: tokenAddress,
-              data,
+              data: '0x70a08231' + cleanAddr,
             },
             'latest',
           ],

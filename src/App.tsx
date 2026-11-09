@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Asset, WalletState } from './types';
 import { INITIAL_ASSETS } from './config/assets';
 import { connectDualWallet, fetchRealEvmBalance } from './services/nimiqWallet';
+import { discoverNewTokens } from './services/tokenDiscovery';
 import { HeroBalanceCard } from './components/HeroBalanceCard';
 import { PortfolioSection } from './components/PortfolioSection';
 import { SwapModal } from './components/SwapModal';
@@ -12,8 +13,33 @@ import { WalletDetailsModal } from './components/WalletDetailsModal';
 import { FloatingDock, ActiveTab } from './components/FloatingDock';
 import { AppSplashIntro } from './components/AppSplashIntro';
 
+// Fast Instant Balance Cache from localStorage
+function getInitialAssets(): Asset[] {
+  try {
+    const cached = localStorage.getItem('omnim_asset_balances');
+    if (cached) {
+      const balanceMap = JSON.parse(cached) as Record<string, number>;
+      return INITIAL_ASSETS.map((a) => ({
+        ...a,
+        userBalance: typeof balanceMap[a.id] === 'number' ? balanceMap[a.id] : a.userBalance,
+      }));
+    }
+  } catch {}
+  return INITIAL_ASSETS;
+}
+
+function getInitialDiscoveredAssets(): Asset[] {
+  try {
+    const cached = localStorage.getItem('omnim_discovered_tokens');
+    if (cached) {
+      return JSON.parse(cached) as Asset[];
+    }
+  } catch {}
+  return [];
+}
+
 export default function App() {
-  const [assets, setAssets] = useState<Asset[]>(INITIAL_ASSETS);
+  const [assets, setAssets] = useState<Asset[]>(getInitialAssets);
   const [wallet, setWallet] = useState<WalletState>({
     isNimiqPayHost: false,
     nimiqConnected: false,
@@ -39,16 +65,22 @@ export default function App() {
 
   const [swapFromAsset, setSwapFromAsset] = useState<Asset | undefined>();
   const [swapToAsset, setSwapToAsset] = useState<Asset | undefined>();
+  const [discoveredAssets, setDiscoveredAssets] = useState<Asset[]>(getInitialDiscoveredAssets);
+
+  const isRefreshingRef = useRef(false);
+  const lastPriceFetchRef = useRef<number>(0);
+  const cachedPricesRef = useRef<any>(null);
 
   useEffect(() => {
+    // Initial fetch
     refreshWalletAndBalances();
 
-    // Auto-refresh every 12 seconds to pick up incoming transfers
+    // Fast polling every 3 seconds for instant deposit/swap reflection
     const timer = setInterval(() => {
       refreshWalletAndBalances();
-    }, 12000);
+    }, 3000);
 
-    // Refresh immediately when window/app is focused or reopened
+    // Instant refresh when window or mobile app resumes / focused
     const handleFocus = () => refreshWalletAndBalances();
     window.addEventListener('focus', handleFocus);
     const handleVisibility = () => {
@@ -58,29 +90,59 @@ export default function App() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    // Listen for EVM wallet events for instant updates
+    let handleChainChanged: (() => void) | undefined;
+    let handleAccountsChanged: (() => void) | undefined;
+    if (window.ethereum) {
+      handleChainChanged = () => refreshWalletAndBalances();
+      handleAccountsChanged = () => refreshWalletAndBalances();
+      window.ethereum.on?.('chainChanged', handleChainChanged);
+      window.ethereum.on?.('accountsChanged', handleAccountsChanged);
+    }
+
     return () => {
       clearInterval(timer);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
+      if (window.ethereum) {
+        window.ethereum.removeListener?.('chainChanged', handleChainChanged);
+        window.ethereum.removeListener?.('accountsChanged', handleAccountsChanged);
+      }
     };
   }, []);
 
   const refreshWalletAndBalances = async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setIsRefreshing(true);
+
     try {
       const state = await connectDualWallet();
       setWallet(state);
 
-      let currentPrices: any = null;
-      try {
-        const priceRes = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true'
-        );
-        if (priceRes.ok) {
-          currentPrices = await priceRes.json();
+      // 1. Price cache check (fetch only every 45 seconds to avoid CoinGecko 429 rate limit)
+      let currentPrices: any = cachedPricesRef.current;
+      const now = Date.now();
+      if (!currentPrices || now - lastPriceFetchRef.current > 45000) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const priceRes = await fetch(
+            'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true',
+            { signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          if (priceRes.ok) {
+            currentPrices = await priceRes.json();
+            cachedPricesRef.current = currentPrices;
+            lastPriceFetchRef.current = now;
+          }
+        } catch {
+          // Keep using existing cached prices
         }
-      } catch {}
+      }
 
+      // 2. Update price and Nimiq balance on existing assets
       setAssets((prevAssets) =>
         prevAssets.map((asset) => {
           let updatedPrice = asset.priceUsd;
@@ -149,6 +211,7 @@ export default function App() {
         })
       );
 
+      // 3. Fast EVM Multi-Chain balance query in parallel
       if (state.evmAddress) {
         const evmBalances = await Promise.all(
           INITIAL_ASSETS.map(async (asset) => {
@@ -165,24 +228,89 @@ export default function App() {
           })
         );
 
-        setAssets((prev) =>
-          prev.map((asset) => {
+        setAssets((prev) => {
+          const updated = prev.map((asset) => {
             const found = evmBalances.find((e) => e.id === asset.id);
             if (found && asset.chainId > 0) {
               return { ...asset, userBalance: found.bal };
             }
             return asset;
-          })
-        );
+          });
+
+          // Cache non-zero balances in localStorage for 0ms initial render
+          try {
+            const balanceMap: Record<string, number> = {};
+            updated.forEach((a) => {
+              if (a.userBalance > 0) balanceMap[a.id] = a.userBalance;
+            });
+            localStorage.setItem('omnim_asset_balances', JSON.stringify(balanceMap));
+          } catch {}
+
+          return updated;
+        });
+      }
+
+      // 4. Auto-discover new tokens not in the predefined list
+      if (state.evmAddress) {
+        try {
+          const knownAddresses = new Set(
+            INITIAL_ASSETS.map((a) => a.contractAddress.toLowerCase())
+          );
+          discoveredAssets.forEach((da) => knownAddresses.add(da.contractAddress.toLowerCase()));
+
+          const newTokens = await discoverNewTokens(state.evmAddress, knownAddresses);
+          if (newTokens.length > 0) {
+            setDiscoveredAssets((prev) => {
+              const existingIds = new Set(prev.map((p) => p.id));
+              const trulyNew = newTokens.filter((t) => !existingIds.has(t.id));
+              let nextList: Asset[];
+              if (trulyNew.length === 0) {
+                nextList = prev.map((existing) => {
+                  const updated = newTokens.find((n) => n.id === existing.id);
+                  return updated
+                    ? {
+                        ...existing,
+                        userBalance: updated.userBalance,
+                        priceUsd: updated.priceUsd,
+                        change24h: updated.change24h,
+                      }
+                    : existing;
+                });
+              } else {
+                nextList = [...prev, ...trulyNew];
+              }
+
+              try {
+                localStorage.setItem('omnim_discovered_tokens', JSON.stringify(nextList));
+              } catch {}
+
+              return nextList;
+            });
+          }
+        } catch (e) {
+          console.warn('Token discovery error:', e);
+        }
       }
     } catch (e) {
       console.warn('Refresh error:', e);
     } finally {
       setIsRefreshing(false);
+      isRefreshingRef.current = false;
     }
   };
 
-  const totalPortfolioValueUsd = assets.reduce(
+  // Combine assets and discovered tokens for portfolio calculation
+  const allCombinedAssets = useMemo(() => {
+    const combined = [...assets];
+    for (const da of discoveredAssets) {
+      if (!combined.some((a) => a.id === da.id)) {
+        combined.push(da);
+      }
+    }
+    return combined;
+  }, [assets, discoveredAssets]);
+
+  const totalPortfolioValueUsd = allCombinedAssets.reduce(
     (sum, a) => sum + a.userBalance * a.priceUsd,
     0
   );
@@ -213,6 +341,9 @@ export default function App() {
         return item;
       })
     );
+
+    // Fast sync after swap
+    setTimeout(() => refreshWalletAndBalances(), 1200);
   };
 
   const handleSendSuccess = (asset: Asset, amount: number) => {
@@ -227,6 +358,9 @@ export default function App() {
         return item;
       })
     );
+
+    // Fast sync after send
+    setTimeout(() => refreshWalletAndBalances(), 1200);
   };
 
   const handleSelectAssetForSwap = (asset: Asset) => {
@@ -263,6 +397,7 @@ export default function App() {
 
           <PortfolioSection
             assets={assets}
+            discoveredAssets={discoveredAssets}
             onSelectAssetForSwap={handleSelectAssetForSwap}
           />
         </main>
@@ -284,7 +419,7 @@ export default function App() {
       <SwapModal
         isOpen={isSwapOpen}
         onClose={() => setIsSwapOpen(false)}
-        assets={assets}
+        assets={allCombinedAssets}
         initialFromAsset={swapFromAsset}
         initialToAsset={swapToAsset}
         wallet={wallet}
@@ -300,7 +435,7 @@ export default function App() {
       <SendModal
         isOpen={isSendOpen}
         onClose={() => setIsSendOpen(false)}
-        assets={assets}
+        assets={allCombinedAssets}
         wallet={wallet}
         onSendSuccess={handleSendSuccess}
       />
