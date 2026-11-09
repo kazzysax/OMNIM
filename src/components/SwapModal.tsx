@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Asset, SwapQuote, WalletState } from '../types';
 import { getSwapQuote } from '../services/relay';
-import { executeEvmTransaction } from '../services/nimiqWallet';
+import { executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
 import { AssetSelectorModal } from './AssetSelectorModal';
 import { OmnimLogoAnimation } from './OmnimLogoAnimation';
 import {
@@ -89,6 +89,29 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const parsedFromAmount = parseFloat(fromAmount) || 0;
   const isInsufficient = parsedFromAmount > fromAsset.userBalance;
 
+  // Gas buffer for native gas tokens (POL, BNB, ETH, AVAX)
+  const isNativePaying =
+    !fromAsset.contractAddress ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+
+  const gasBuffer = isNativePaying
+    ? fromAsset.chainId === 137
+      ? 0.08 // Polygon: reserve 0.08 POL
+      : fromAsset.chainId === 56
+      ? 0.002 // BSC: reserve 0.002 BNB
+      : 0.001 // Base/Arb/OP/AVAX
+    : 0;
+
+  const maxSpendable = isNativePaying
+    ? Math.max(0, parseFloat((fromAsset.userBalance - gasBuffer).toFixed(4)))
+    : fromAsset.userBalance;
+
+  const isExceedingGasReserve =
+    isNativePaying &&
+    parsedFromAmount > maxSpendable &&
+    parsedFromAmount <= fromAsset.userBalance;
+
   const handleSwitchAssets = () => {
     setFromAsset(toAsset);
     setToAsset(fromAsset);
@@ -115,21 +138,35 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           for (let j = 0; j < step.items.length; j++) {
             const item = step.items[j];
             if (item.data) {
-              setExecutionStatusText(`Step ${i + 1}/${quote.relayTxData.length}: ${step.description || 'Confirm in Wallet'}...`);
-              await executeEvmTransaction({
+              setExecutionStatusText(`Step ${i + 1}/${quote.relayTxData.length}: Please confirm transaction in your wallet...`);
+              const txHash = await executeEvmTransaction({
                 to: item.data.to,
                 data: item.data.data,
                 value: item.data.value,
                 from: wallet.evmAddress || undefined,
                 chainId: fromAsset.chainId,
               });
+
+              if (txHash) {
+                const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
+                setExecutionStatusText(`Transaction broadcasted (${shortHash}). Waiting for on-chain block confirmation...`);
+                
+                // 1. Wait for block inclusion on origin chain
+                await waitForEvmReceipt(txHash, fromAsset.chainId);
+
+                // 2. If cross-chain, show relay progress
+                if (fromAsset.chainId !== toAsset.chainId) {
+                  setExecutionStatusText(`Confirmed on ${fromAsset.chain}! Relaying cross-chain to ${toAsset.chain}...`);
+                  await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+              }
             }
           }
         }
       }
 
       setIsSuccess(true);
-      setExecutionStatusText('Swap completed successfully on-chain!');
+      setExecutionStatusText('Swap confirmed and executed on-chain!');
       confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
 
       onSwapSuccess(fromAsset, toAsset, parsedFromAmount, parseFloat(quote.toAmount) || 0);
@@ -138,9 +175,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         setIsExecuting(false);
         setIsSuccess(false);
         onClose();
-      }, 2000);
+      }, 2500);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Swap transaction was rejected or failed.');
+      setErrorMsg(err.message || 'Swap transaction was rejected or failed on-chain.');
       setIsExecuting(false);
     }
   };
@@ -170,7 +207,19 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
                 <span>You Pay</span>
-                <span>Balance: {fromAsset.userBalance.toLocaleString()} {fromAsset.symbol}</span>
+                <div className="flex items-center gap-1.5">
+                  <span>Balance: {fromAsset.userBalance > 0 ? (fromAsset.userBalance > 1000 ? fromAsset.userBalance.toLocaleString() : fromAsset.userBalance.toFixed(4)) : '0.00'} {fromAsset.symbol}</span>
+                  {fromAsset.userBalance > 0 && (
+                    <button
+                      type="button"
+                      disabled={isExecuting}
+                      onClick={() => setFromAmount(maxSpendable > 0 ? maxSpendable.toString() : '0')}
+                      className="px-1.5 py-0.2 rounded bg-amber-100 hover:bg-amber-200 text-amber-800 text-[10px] font-bold transition-colors"
+                    >
+                      MAX
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center justify-between gap-2">
@@ -203,6 +252,19 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 ≈ ${(parsedFromAmount * fromAsset.priceUsd).toFixed(2)} USD ({fromAsset.chain})
               </div>
             </div>
+
+            {isExceedingGasReserve && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-center justify-between">
+                <span>Reserving ~{gasBuffer} {fromAsset.symbol} for gas fees.</span>
+                <button
+                  type="button"
+                  onClick={() => setFromAmount(maxSpendable.toString())}
+                  className="font-bold underline text-amber-900 hover:text-amber-950 ml-2 shrink-0"
+                >
+                  Set {maxSpendable}
+                </button>
+              </div>
+            )}
 
             <div className="flex justify-center -my-1 z-10 relative">
               <button

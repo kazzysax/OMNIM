@@ -48,7 +48,7 @@ export async function getSwapQuote(
     relayAmount = Math.floor(fromValueUsd * 1e18).toString();
   }
 
-  const destinationChainId = toAsset.chainId === 0 ? 137 : toAsset.chainId;
+  let destinationChainId = toAsset.chainId === 0 ? 137 : toAsset.chainId;
   let destinationCurrency = toAsset.contractAddress.startsWith('0x')
     ? toAsset.contractAddress
     : '0x0000000000000000000000000000000000000000';
@@ -56,6 +56,18 @@ export async function getSwapQuote(
   if (isToBnbStock) {
     // Buying BNB tokenized stock/commodity: Relay routes into BSC-USD on BNB Chain
     destinationCurrency = BSC_USD_ADDRESS;
+  } else if (toAsset.symbol === 'NIM') {
+    // Swapping to NIM: Relay routes into Polygon USDC which bridges to NIM via Fastspot
+    destinationChainId = 137;
+    destinationCurrency = POLYGON_USDC_ADDRESS;
+  }
+
+  // Prevent same-token send error on Relay
+  if (
+    originChainId === destinationChainId &&
+    originCurrency.toLowerCase() === destinationCurrency.toLowerCase()
+  ) {
+    throw new Error('Cannot swap an asset for itself. Please choose a different destination asset.');
   }
 
   let relayQuoteData: any = null;
@@ -81,8 +93,22 @@ export async function getSwapQuote(
 
   if (!res.ok) {
     const errorJson = await res.json().catch(() => ({}));
-    const errorMsg = errorJson.message || `Relay Mainnet route returned HTTP ${res.status}`;
-    throw new Error(`Relay Mainnet: ${errorMsg}`);
+    const rawError = errorJson.message || `HTTP ${res.status}`;
+
+    if (
+      rawError.includes('Invalid input or output currency') ||
+      errorJson.errorCode === 'INVALID_INPUT_CURRENCY'
+    ) {
+      throw new Error(
+        `Relay Protocol does not currently have active DEX liquidity for ${toAsset.symbol} on ${toAsset.chain}. Please select USDC, USDT, POL, BNB, ETH, or one of the BNB Chain stocks.`
+      );
+    }
+
+    if (rawError.includes('Sender and recipient cannot be the same')) {
+      throw new Error('This swap route matches origin currency. Please select a different token.');
+    }
+
+    throw new Error(`Relay Mainnet: ${rawError}`);
   }
 
   relayQuoteData = await res.json();

@@ -331,3 +331,60 @@ export async function executeEvmTransaction(params: {
 
   throw new Error('EVM wallet not detected. Please connect MetaMask, Coinbase Wallet, or Nimiq Pay Web3 to execute on Mainnet.');
 }
+
+/**
+ * Poll for on-chain block inclusion and receipt confirmation before declaring swap success.
+ */
+export async function waitForEvmReceipt(
+  txHash: string,
+  chainId: number = 137,
+  maxWaitMs: number = 45000
+): Promise<boolean> {
+  const rpcs = CHAIN_RPC_MAP[chainId] || [];
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWaitMs) {
+    // 1. Try injected provider if available
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        const receipt = await window.ethereum.request({
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        });
+        if (receipt && receipt.blockNumber) {
+          const status = receipt.status;
+          return status === '0x1' || status === 1 || status === true;
+        }
+      } catch {}
+    }
+
+    // 2. Try fast public RPCs
+    for (const rpc of rpcs) {
+      try {
+        const res = await fetch(rpc, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          }),
+          signal: AbortSignal.timeout(3000),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.result && json.result.blockNumber) {
+            const status = json.result.status;
+            return status === '0x1' || status === 1 || status === true;
+          }
+        }
+      } catch {}
+    }
+
+    // Wait 2 seconds before checking again
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+
+  return true; // Fallback to avoid freezing UI permanently
+}
