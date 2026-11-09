@@ -29,11 +29,11 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
 
       {/* Wallet Dropdown Selector */}
       <div className="flex justify-center mt-1 mb-2">
-        <button 
+        <button
           onClick={onOpenWalletDetails}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
         >
-          <span>Wallet 1</span>
+          <span>{wallet.nimiqAddress ? `${wallet.nimiqAddress.slice(0, 6)}...` : wallet.evmAddress ? `${wallet.evmAddress.slice(0, 6)}...${wallet.evmAddress.slice(-4)}` : 'Wallet 1'}</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -41,10 +41,10 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       {/* Big Hero Balance */}
       <div className="text-center my-1">
         <h1 className="text-4xl sm:text-[44px] font-bold tracking-tight text-white">
-          ${totalBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          ${totalBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>
         <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-slate-400 font-medium">
-          <span>{nimBalance.toFixed(2)} NIM</span>
+          <span>{nimBalance > 0 ? nimBalance.toFixed(2) : '0.00'} NIM</span>
           <RotateCcw className="w-3 h-3 text-slate-500 cursor-pointer hover:text-slate-300" />
         </div>
       </div>
@@ -52,7 +52,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       {/* Action Buttons Row */}
       <div className="flex items-center justify-center gap-3.5 mt-5 mb-4">
         {/* Receive Pill Button */}
-        <button 
+        <button
           onClick={onOpenReceive}
           className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-95 text-white text-xs font-semibold transition-all shadow-sm"
         >
@@ -61,7 +61,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         </button>
 
         {/* Central Swap Plus Button */}
-        <button 
+        <button
           onClick={onOpenSwap}
           title="Swap Assets"
           className="w-12 h-12 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-90 text-white flex items-center justify-center text-xl transition-all shadow-sm"
@@ -70,7 +70,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         </button>
 
         {/* Send Pill Button */}
-        <button 
+        <button
           onClick={onOpenSend}
           className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-95 text-white text-xs font-semibold transition-all shadow-sm"
         >

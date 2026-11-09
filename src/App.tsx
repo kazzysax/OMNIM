@@ -10,6 +10,7 @@ import { SendModal } from './components/SendModal';
 import { AssetDetailModal } from './components/AssetDetailModal';
 import { WalletDetailsModal } from './components/WalletDetailsModal';
 import { FloatingDock, ActiveTab } from './components/FloatingDock';
+import { AppSplashIntro } from './components/AppSplashIntro';
 
 export default function App() {
   const [assets, setAssets] = useState<Asset[]>(INITIAL_ASSETS);
@@ -47,45 +48,108 @@ export default function App() {
       const state = await connectDualWallet();
       setWallet(state);
 
+      let currentPrices: any = null;
       try {
         const priceRes = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,bitcoin&vs_currencies=usd'
+          'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true'
         );
         if (priceRes.ok) {
-          const prices = await priceRes.json();
-          setAssets((prev) =>
-            prev.map((a) => {
-              if (a.symbol === 'NIM' && prices.nimiq?.usd) return { ...a, priceUsd: prices.nimiq.usd };
-              if (a.symbol === 'USDT' && prices.tether?.usd) return { ...a, priceUsd: prices.tether.usd };
-              if (a.symbol === 'ETH' && prices.ethereum?.usd) return { ...a, priceUsd: prices.ethereum.usd };
-              if (a.symbol === 'BNB' && prices.binancecoin?.usd) return { ...a, priceUsd: prices.binancecoin.usd };
-              if (a.symbol === 'POL' && prices['matic-network']?.usd) return { ...a, priceUsd: prices['matic-network'].usd };
-              if (a.symbol === 'WBTC' && prices.bitcoin?.usd) return { ...a, priceUsd: prices.bitcoin.usd };
-              return a;
-            })
-          );
+          currentPrices = await priceRes.json();
         }
       } catch {}
 
-      if (state.nimiqAddress || state.evmAddress) {
-        const updated = await Promise.all(
-          assets.map(async (asset) => {
-            if (asset.symbol === 'NIM') {
-              const nimBalance = state.nimiqBalanceLuna / 100000;
-              return { ...asset, userBalance: nimBalance };
+      setAssets((prevAssets) =>
+        prevAssets.map((asset) => {
+          let updatedPrice = asset.priceUsd;
+          let updatedChange = asset.change24h;
+
+          if (currentPrices) {
+            if (asset.symbol === 'NIM' && currentPrices.nimiq?.usd) {
+              updatedPrice = currentPrices.nimiq.usd;
+              if (typeof currentPrices.nimiq.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.nimiq.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'USDT' && currentPrices.tether?.usd) {
+              updatedPrice = currentPrices.tether.usd;
+              if (typeof currentPrices.tether.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.tether.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'ETH' && currentPrices.ethereum?.usd) {
+              updatedPrice = currentPrices.ethereum.usd;
+              if (typeof currentPrices.ethereum.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.ethereum.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'BNB' && currentPrices.binancecoin?.usd) {
+              updatedPrice = currentPrices.binancecoin.usd;
+              if (typeof currentPrices.binancecoin.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.binancecoin.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'POL' && currentPrices['matic-network']?.usd) {
+              updatedPrice = currentPrices['matic-network'].usd;
+              if (typeof currentPrices['matic-network'].usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices['matic-network'].usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'WBTC' && currentPrices.bitcoin?.usd) {
+              updatedPrice = currentPrices.bitcoin.usd;
+              if (typeof currentPrices.bitcoin.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.bitcoin.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'AVAX' && currentPrices['avalanche-2']?.usd) {
+              updatedPrice = currentPrices['avalanche-2'].usd;
+              if (typeof currentPrices['avalanche-2'].usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices['avalanche-2'].usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'ARB' && currentPrices.arbitrum?.usd) {
+              updatedPrice = currentPrices.arbitrum.usd;
+              if (typeof currentPrices.arbitrum.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.arbitrum.usd_24h_change.toFixed(2));
+              }
+            } else if (asset.symbol === 'OP' && currentPrices.optimism?.usd) {
+              updatedPrice = currentPrices.optimism.usd;
+              if (typeof currentPrices.optimism.usd_24h_change === 'number') {
+                updatedChange = parseFloat(currentPrices.optimism.usd_24h_change.toFixed(2));
+              }
             }
-            if (state.evmAddress && asset.chainId > 0) {
-              const realBal = await fetchRealEvmBalance(
+          }
+
+          let balance = asset.userBalance;
+          if (asset.symbol === 'NIM') {
+            balance = state.nimiqAddress ? state.nimiqBalanceLuna / 100000 : 0;
+          }
+
+          return {
+            ...asset,
+            priceUsd: updatedPrice,
+            change24h: updatedChange,
+            userBalance: balance,
+          };
+        })
+      );
+
+      if (state.evmAddress) {
+        const evmBalances = await Promise.all(
+          INITIAL_ASSETS.map(async (asset) => {
+            if (asset.chainId > 0 && asset.contractAddress) {
+              const bal = await fetchRealEvmBalance(
                 asset.contractAddress,
-                state.evmAddress,
+                state.evmAddress!,
                 asset.decimals
               );
-              return { ...asset, userBalance: realBal };
+              return { id: asset.id, bal };
             }
-            return { ...asset, userBalance: 0 };
+            return { id: asset.id, bal: 0 };
           })
         );
-        setAssets(updated);
+
+        setAssets((prev) =>
+          prev.map((asset) => {
+            const found = evmBalances.find((e) => e.id === asset.id);
+            if (found && asset.chainId > 0) {
+              return { ...asset, userBalance: found.bal };
+            }
+            return asset;
+          })
+        );
       }
     } catch (e) {
       console.warn('Refresh error:', e);
@@ -152,6 +216,7 @@ export default function App() {
 
   return (
     <div className="w-full min-h-screen bg-[#F2F2F7] flex justify-center selection:bg-slate-300">
+      <AppSplashIntro />
       <div className="w-full max-w-[420px] min-h-screen bg-[#F2F2F7] flex flex-col relative">
         <main className="flex-1 overflow-y-auto no-scrollbar pt-2 sm:pt-4">
           <HeroBalanceCard

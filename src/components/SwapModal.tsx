@@ -3,6 +3,7 @@ import { Asset, SwapQuote, WalletState } from '../types';
 import { getSwapQuote } from '../services/relay';
 import { executeEvmTransaction } from '../services/nimiqWallet';
 import { AssetSelectorModal } from './AssetSelectorModal';
+import { OmnimLogoAnimation } from './OmnimLogoAnimation';
 import {
   X,
   ArrowDownUp,
@@ -36,7 +37,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
   const [fromAsset, setFromAsset] = useState<Asset>(defaultFrom);
   const [toAsset, setToAsset] = useState<Asset>(defaultTo);
-  const [fromAmount, setFromAmount] = useState<string>('50');
+  const [fromAmount, setFromAmount] = useState<string>('');
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [isLoadingQuote, setIsLoadingQuote] = useState<boolean>(false);
 
@@ -281,9 +282,17 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             )}
 
             {isExecuting && (
-              <div className="p-2.5 rounded-xl bg-slate-100 text-xs text-slate-800 flex items-center justify-center gap-2">
-                <Clock className="w-3.5 h-3.5 animate-spin" />
-                <span className="truncate">{executionStatusText}</span>
+              <div className="py-4 px-3 rounded-2xl bg-gradient-to-b from-[#0F1015] to-[#1A1C24] text-white flex flex-col items-center justify-center gap-3 shadow-lg border border-amber-500/20 animate-in fade-in zoom-in-95 duration-200">
+                <OmnimLogoAnimation mode="loop" size={48} showGlow={true} />
+                <div className="text-center space-y-1">
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#FCE1C9]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                    <span>Settling Swap on Chain</span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 font-mono truncate max-w-[280px]">
+                    {executionStatusText}
+                  </p>
+                </div>
               </div>
             )}
 
