@@ -144,13 +144,15 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
 
                 <div className="text-right flex items-center gap-3">
                   <div>
-                    <div className="font-semibold text-slate-900 text-xs">
-                      ${asset.priceUsd < 0.01 ? asset.priceUsd.toFixed(6) : asset.priceUsd.toFixed(2)}
-                    </div>
-                    <div className="text-[11px] text-slate-400 font-mono">
+                    {/* User's Balance: UPPER FIGURE & BLACK IN COLOUR */}
+                    <div className="font-bold text-slate-900 text-xs font-mono">
                       {asset.userBalance > 0
-                        ? `${asset.userBalance > 1000 ? asset.userBalance.toLocaleString() : asset.userBalance.toFixed(2)} ${asset.symbol}`
+                        ? `${asset.userBalance > 1000 ? asset.userBalance.toLocaleString() : asset.userBalance.toFixed(asset.userBalance > 10 ? 2 : 4)} ${asset.symbol}`
                         : '0'}
+                    </div>
+                    {/* Real-time Price: LOWER FIGURE & DAMPENED IN COLOUR */}
+                    <div className="text-[11px] text-slate-400 font-medium">
+                      ${asset.priceUsd < 0.01 ? asset.priceUsd.toFixed(6) : asset.priceUsd.toFixed(2)}
                     </div>
                   </div>
 
