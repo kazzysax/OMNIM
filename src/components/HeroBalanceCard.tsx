@@ -11,6 +11,8 @@ interface HeroBalanceCardProps {
   onOpenSend: () => void;
   onOpenSwap: () => void;
   onOpenWalletDetails: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
@@ -21,6 +23,8 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   onOpenSend,
   onOpenSwap,
   onOpenWalletDetails,
+  onRefresh,
+  isRefreshing,
 }) => {
   return (
     <div className="mx-4 mt-2 mb-3 rounded-[36px] bg-[#1C1C1E] text-white shadow-xl overflow-hidden pb-5">
@@ -45,7 +49,14 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         </h1>
         <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-slate-400 font-medium">
           <span>{nimBalance > 0 ? nimBalance.toFixed(2) : '0.00'} NIM</span>
-          <RotateCcw className="w-3 h-3 text-slate-500 cursor-pointer hover:text-slate-300" />
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            title="Refresh on-chain balances"
+            className="p-1 -m-1 hover:text-slate-300 transition-colors"
+          >
+            <RotateCcw className={`w-3 h-3 text-slate-500 hover:text-slate-300 transition-transform ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -79,12 +90,16 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         </button>
       </div>
 
-      {/* Status Badge: • Synchronized */}
+      {/* Status Badge: • Synchronized / Syncing */}
       <div className="flex justify-center mt-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2C2C2E] text-[11px] font-medium text-slate-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span>Synchronized</span>
-        </div>
+        <button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2C2C2E] text-[11px] font-medium text-slate-300 hover:bg-[#38383A] active:scale-95 transition-all"
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${isRefreshing ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+          <span>{isRefreshing ? 'Syncing on-chain...' : 'Synchronized'}</span>
+        </button>
       </div>
     </div>
   );

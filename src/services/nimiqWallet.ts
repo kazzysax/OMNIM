@@ -88,43 +88,113 @@ export async function connectDualWallet(): Promise<WalletState> {
   };
 }
 
+const CHAIN_RPC_MAP: Record<number, string[]> = {
+  56: ['https://bsc.publicnode.com', 'https://binance.llamarpc.com'],
+  137: ['https://polygon-bor-rpc.publicnode.com', 'https://polygon-rpc.com'],
+  8453: ['https://mainnet.base.org'],
+  42161: ['https://arbitrum-one-rpc.publicnode.com', 'https://arb1.arbitrum.io/rpc'],
+  10: ['https://optimism-rpc.publicnode.com', 'https://mainnet.optimism.io'],
+  43114: ['https://avalanche-c-chain-rpc.publicnode.com', 'https://api.avax.network/ext/bc/C/rpc'],
+};
+
 export async function fetchRealEvmBalance(
   tokenAddress: string,
   userAddress: string,
-  decimals: number = 18
+  decimals: number = 18,
+  chainId: number = 56
 ): Promise<number> {
-  if (typeof window === 'undefined' || !window.ethereum || !userAddress) return 0;
+  if (!userAddress) return 0;
 
-  try {
-    if (tokenAddress === '0x0000000000000000000000000000000000000000') {
-      const balanceWeiHex = await window.ethereum.request({
-        method: 'eth_getBalance',
-        params: [userAddress, 'latest'],
-      });
-      const balanceWei = BigInt(balanceWeiHex);
-      return Number(balanceWei) / 1e18;
-    } else {
+  const isNative = !tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000';
+  const rpcs = CHAIN_RPC_MAP[chainId] || [];
+
+  // 1. Direct multi-chain JSON-RPC query: accurately reaches BNB Chain, Polygon, Base, Arbitrum, etc.
+  for (const rpcUrl of rpcs) {
+    try {
       const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-      const data = '0x70a08231' + cleanAddr;
+      const payload = isNative
+        ? {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_getBalance',
+            params: [userAddress, 'latest'],
+          }
+        : {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_call',
+            params: [
+              {
+                to: tokenAddress,
+                data: '0x70a08231' + cleanAddr,
+              },
+              'latest',
+            ],
+          };
 
-      const balanceHex = await window.ethereum.request({
-        method: 'eth_call',
-        params: [
-          {
-            to: tokenAddress,
-            data,
-          },
-          'latest',
-        ],
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
-      if (!balanceHex || balanceHex === '0x') return 0;
-      const balanceBig = BigInt(balanceHex);
-      return Number(balanceBig) / Math.pow(10, decimals);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.result && json.result !== '0x') {
+          const balanceBig = BigInt(json.result);
+          return Number(balanceBig) / Math.pow(10, decimals);
+        } else if (json.result === '0x0' || json.result === '0x') {
+          return 0;
+        }
+      }
+    } catch {
+      // Continue to next RPC or fallback
     }
-  } catch (err) {
-    return 0;
   }
+
+  // 2. Fallback to injected window.ethereum
+  if (typeof window !== 'undefined' && window.ethereum) {
+    try {
+      if (isNative) {
+        const balanceWeiHex = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [userAddress, 'latest'],
+        });
+        if (balanceWeiHex && balanceWeiHex !== '0x') {
+          const balanceWei = BigInt(balanceWeiHex);
+          return Number(balanceWei) / Math.pow(10, decimals);
+        }
+      } else {
+        const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+        const data = '0x70a08231' + cleanAddr;
+
+        const balanceHex = await window.ethereum.request({
+          method: 'eth_call',
+          params: [
+            {
+              to: tokenAddress,
+              data,
+            },
+            'latest',
+          ],
+        });
+
+        if (balanceHex && balanceHex !== '0x') {
+          const balanceBig = BigInt(balanceHex);
+          return Number(balanceBig) / Math.pow(10, decimals);
+        }
+      }
+    } catch {
+      return 0;
+    }
+  }
+
+  return 0;
 }
 
 export async function executeNimTransfer(params: {

@@ -28,6 +28,7 @@ export default function App() {
   });
 
   const [activeNavTab, setActiveNavTab] = useState<ActiveTab>('dashboard');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Modals
   const [isSwapOpen, setIsSwapOpen] = useState(false);
@@ -41,9 +42,31 @@ export default function App() {
 
   useEffect(() => {
     refreshWalletAndBalances();
+
+    // Auto-refresh every 12 seconds to pick up incoming transfers
+    const timer = setInterval(() => {
+      refreshWalletAndBalances();
+    }, 12000);
+
+    // Refresh immediately when window/app is focused or reopened
+    const handleFocus = () => refreshWalletAndBalances();
+    window.addEventListener('focus', handleFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshWalletAndBalances();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const refreshWalletAndBalances = async () => {
+    setIsRefreshing(true);
     try {
       const state = await connectDualWallet();
       setWallet(state);
@@ -133,7 +156,8 @@ export default function App() {
               const bal = await fetchRealEvmBalance(
                 asset.contractAddress,
                 state.evmAddress!,
-                asset.decimals
+                asset.decimals,
+                asset.chainId
               );
               return { id: asset.id, bal };
             }
@@ -153,6 +177,8 @@ export default function App() {
       }
     } catch (e) {
       console.warn('Refresh error:', e);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -231,6 +257,8 @@ export default function App() {
               setIsSwapOpen(true);
             }}
             onOpenWalletDetails={() => setIsWalletDetailsOpen(true)}
+            onRefresh={refreshWalletAndBalances}
+            isRefreshing={isRefreshing}
           />
 
           <PortfolioSection

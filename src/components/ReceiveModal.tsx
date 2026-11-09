@@ -44,7 +44,7 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, wal
               activeTab === 'evm' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
             }`}
           >
-            EVM (Base, Polygon, ETH)
+            EVM (BNB Chain, Polygon, Base)
           </button>
           <button
             onClick={() => setActiveTab('nimiq')}
