@@ -25,7 +25,7 @@ function getInitialAssets(): Asset[] {
         userBalance: typeof balanceMap[a.id] === 'number' ? balanceMap[a.id] : a.userBalance,
       }));
     }
-  } catch {}
+  } catch { }
   return INITIAL_ASSETS;
 }
 
@@ -35,7 +35,7 @@ function getInitialDiscoveredAssets(): Asset[] {
     if (cached) {
       return JSON.parse(cached) as Asset[];
     }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -58,7 +58,7 @@ function getInitialTransactions(): TransactionRecord[] {
         }));
       }
     }
-  } catch {}
+  } catch { }
 
   return [
     {
@@ -106,7 +106,7 @@ export default function App() {
 
   const [activeNavTab, setActiveNavTab] = useState<ActiveTab>('dashboard');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Modals
   const [isSwapOpen, setIsSwapOpen] = useState(false);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
@@ -298,7 +298,7 @@ export default function App() {
               if (a.userBalance > 0) balanceMap[a.id] = a.userBalance;
             });
             localStorage.setItem('omnim_asset_balances', JSON.stringify(balanceMap));
-          } catch {}
+          } catch { }
 
           return updated;
         });
@@ -323,11 +323,11 @@ export default function App() {
                   const updated = newTokens.find((n) => n.id === existing.id);
                   return updated
                     ? {
-                        ...existing,
-                        userBalance: updated.userBalance,
-                        priceUsd: updated.priceUsd,
-                        change24h: updated.change24h,
-                      }
+                      ...existing,
+                      userBalance: updated.userBalance,
+                      priceUsd: updated.priceUsd,
+                      change24h: updated.change24h,
+                    }
                     : existing;
                 });
               } else {
@@ -336,7 +336,7 @@ export default function App() {
 
               try {
                 localStorage.setItem('omnim_discovered_tokens', JSON.stringify(nextList));
-              } catch {}
+              } catch { }
 
               return nextList;
             });
@@ -429,7 +429,7 @@ export default function App() {
       const updated = [newTx, ...prev];
       try {
         localStorage.setItem('omnim_tx_history', JSON.stringify(updated));
-      } catch {}
+      } catch { }
       return updated;
     });
 
@@ -476,7 +476,7 @@ export default function App() {
       const updated = [newTx, ...prev];
       try {
         localStorage.setItem('omnim_tx_history', JSON.stringify(updated));
-      } catch {}
+      } catch { }
       return updated;
     });
 

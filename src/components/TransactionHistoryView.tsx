@@ -67,31 +67,28 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
       <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 border border-slate-300/40 text-xs font-semibold">
         <button
           onClick={() => setFilter('all')}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            filter === 'all'
+          className={`flex-1 py-1.5 rounded-lg transition-all ${filter === 'all'
               ? 'bg-white text-slate-900 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
-          }`}
+            }`}
         >
           All
         </button>
         <button
           onClick={() => setFilter('swap')}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            filter === 'swap'
+          className={`flex-1 py-1.5 rounded-lg transition-all ${filter === 'swap'
               ? 'bg-white text-slate-900 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
-          }`}
+            }`}
         >
           Swaps
         </button>
         <button
           onClick={() => setFilter('transfer')}
-          className={`flex-1 py-1.5 rounded-lg transition-all ${
-            filter === 'transfer'
+          className={`flex-1 py-1.5 rounded-lg transition-all ${filter === 'transfer'
               ? 'bg-white text-slate-900 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
-          }`}
+            }`}
         >
           Transfers
         </button>
@@ -126,13 +123,12 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                      tx.type === 'swap'
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${tx.type === 'swap'
                         ? 'bg-purple-100 text-purple-700'
                         : tx.type === 'send'
                           ? 'bg-rose-100 text-rose-700'
                           : 'bg-emerald-100 text-emerald-700'
-                    }`}
+                      }`}
                   >
                     {tx.type === 'swap' ? (
                       <ArrowLeftRight className="w-4 h-4" />

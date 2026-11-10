@@ -438,13 +438,12 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               type="button"
               onClick={handleExecuteSwap}
               disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
-              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${
-                isInsufficient
+              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
                   ? 'bg-red-50 text-red-500 cursor-not-allowed'
                   : parsedFromAmount <= 0
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     : 'bg-[#1C1C1E] text-white hover:bg-black'
-              }`}
+                }`}
             >
               {isInsufficient
                 ? 'Insufficient Balance'
