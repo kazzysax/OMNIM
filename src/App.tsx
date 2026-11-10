@@ -121,6 +121,7 @@ export default function App() {
   const isRefreshingRef = useRef(false);
   const lastPriceFetchRef = useRef<number>(0);
   const cachedPricesRef = useRef<any>(null);
+  const lastDiscoveryRef = useRef<number>(0);
 
   useEffect(() => {
     // Initial fetch
@@ -304,8 +305,10 @@ export default function App() {
         });
       }
 
-      // 4. Auto-discover new tokens not in the predefined list
-      if (state.evmAddress) {
+      // 4. Auto-discover new tokens not in the predefined list (throttled to every 3 mins to avoid network congestion)
+      const nowTs = Date.now();
+      if (state.evmAddress && nowTs - lastDiscoveryRef.current > 180000) {
+        lastDiscoveryRef.current = nowTs;
         try {
           const knownAddresses = new Set(
             INITIAL_ASSETS.map((a) => a.contractAddress.toLowerCase())

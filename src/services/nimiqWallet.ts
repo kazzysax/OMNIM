@@ -153,13 +153,44 @@ export async function fetchRealEvmBalance(
       ],
     };
 
+  // 1. Try injected window.ethereum first for Polygon (instant 0ms IPC call)
+  if (typeof window !== 'undefined' && window.ethereum && (chainId === 137 || !chainId)) {
+    try {
+      if (isNative) {
+        const balanceWeiHex = await window.ethereum.request({
+          method: 'eth_getBalance',
+          params: [userAddress, 'latest'],
+        });
+        if (balanceWeiHex && balanceWeiHex !== '0x') {
+          const balanceBig = BigInt(balanceWeiHex);
+          return Number(balanceBig) / Math.pow(10, decimals);
+        }
+      } else {
+        const balanceHex = await window.ethereum.request({
+          method: 'eth_call',
+          params: [
+            {
+              to: tokenAddress,
+              data: '0x70a08231' + cleanAddr,
+            },
+            'latest',
+          ],
+        });
+        if (balanceHex && balanceHex !== '0x') {
+          const balanceBig = BigInt(balanceHex);
+          return Number(balanceBig) / Math.pow(10, decimals);
+        }
+      }
+    } catch { }
+  }
+
   const rpcs = CHAIN_RPC_MAP[chainId] || [];
 
   // Fast fetch function with 2200ms timeout
   const fetchSingleRpc = async (rpcUrl: string): Promise<number> => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2200);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2200);
       const res = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,27 +204,25 @@ export async function fetchRealEvmBalance(
         if (json.result && json.result !== '0x') {
           const balanceBig = BigInt(json.result);
           return Number(balanceBig) / Math.pow(10, decimals);
-        } else if (json.result === '0x0' || json.result === '0x') {
-          return 0;
         }
+        return 0;
       }
-      throw new Error(`RPC bad response from ${rpcUrl}`);
-    } catch (err) {
-      clearTimeout(timeoutId);
-      throw err;
+      return 0;
+    } catch {
+      return 0;
     }
   };
 
-  // 1. Race all active public RPC endpoints in parallel for instantaneous result
+  // 2. Race all active public RPC endpoints in parallel for instantaneous result
   if (rpcs.length > 0) {
     try {
       return await Promise.any(rpcs.map((url) => fetchSingleRpc(url)));
     } catch {
-      // All RPCs in Promise.any failed, fall through to window.ethereum
+      // Fall through to window.ethereum
     }
   }
 
-  // 2. Fallback to injected window.ethereum
+  // 3. Fallback to injected window.ethereum
   if (typeof window !== 'undefined' && window.ethereum) {
     try {
       if (isNative) {

@@ -84,14 +84,31 @@ export async function fetchLiFiQuote(
   url.searchParams.set('fromAmount', toAtomicUnits(parsedFromAmount, fromAsset.decimals));
   url.searchParams.set('fromAddress', userEvmAddress);
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-  const res = await fetch(url.toString(), { signal: controller.signal });
-  clearTimeout(timer);
+  let res: Response;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    res = await fetch(url.toString(), { signal: controller.signal });
+    clearTimeout(timer);
+  } catch (netErr: any) {
+    try {
+      await new Promise((r) => setTimeout(r, 600));
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12000);
+      res = await fetch(url.toString(), { signal: controller.signal });
+      clearTimeout(timer);
+    } catch {
+      throw new Error('Routing network connection busy. Please retry in a few seconds.');
+    }
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || `Li.Fi route error: HTTP ${res.status}`);
+    const rawMsg = err.message || '';
+    if (rawMsg.toLowerCase().includes('no available quotes') || rawMsg.toLowerCase().includes('no route found')) {
+      throw new Error(`No direct route found for ${fromAsset.symbol} to ${toAsset.symbol}. Try swapping to USDT or POL first.`);
+    }
+    throw new Error(rawMsg || `Li.Fi route error: HTTP ${res.status}`);
   }
 
   const data = await res.json();
@@ -236,19 +253,24 @@ export async function fetchRelayQuote(
   let priceImpact = 0;
   let timeEstimate = 3;
 
-  const res = await fetch(`${RELAY_API_BASE}/quote/v2`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      user: userEvmAddress,
-      originChainId,
-      destinationChainId,
-      originCurrency,
-      destinationCurrency,
-      amount: relayAmount,
-      tradeType: 'EXACT_INPUT',
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${RELAY_API_BASE}/quote/v2`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user: userEvmAddress,
+        originChainId,
+        destinationChainId,
+        originCurrency,
+        destinationCurrency,
+        amount: relayAmount,
+        tradeType: 'EXACT_INPUT',
+      }),
+    });
+  } catch {
+    throw new Error('Relay routing network request timed out. Please try again in a moment.');
+  }
 
   if (!res.ok) {
     const errorJson = await res.json().catch(() => ({}));

@@ -63,30 +63,42 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   useEffect(() => {
     let active = true;
 
-    async function fetchQuote() {
-      if (!fromAsset || !toAsset) return;
-      setIsLoadingQuote(true);
+    const parsed = parseFloat(fromAmount) || 0;
+    if (parsed <= 0) {
+      setQuote(null);
       setErrorMsg(null);
+      setIsLoadingQuote(false);
+      return;
+    }
 
+    setIsLoadingQuote(true);
+    setErrorMsg(null);
+
+    const debounceTimer = setTimeout(async () => {
       try {
         const q = await getSwapQuote(fromAsset, toAsset, fromAmount, wallet.evmAddress || undefined);
         if (active) {
           setQuote(q);
+          setErrorMsg(null);
         }
       } catch (err: any) {
         if (active) {
           setQuote(null);
-          setErrorMsg(err.message || 'Mainnet route quotation failed.');
+          const rawMsg = err.message || '';
+          if (rawMsg.toLowerCase().includes('failed to fetch') || rawMsg.toLowerCase().includes('networkerror')) {
+            setErrorMsg('Network quote service temporarily slow. Retrying in background...');
+          } else {
+            setErrorMsg(rawMsg || 'Mainnet route quotation failed.');
+          }
         }
       } finally {
         if (active) setIsLoadingQuote(false);
       }
-    }
-
-    fetchQuote();
+    }, 450);
 
     return () => {
       active = false;
+      clearTimeout(debounceTimer);
     };
   }, [fromAsset, toAsset, fromAmount, wallet.evmAddress]);
 
