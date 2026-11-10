@@ -71,6 +71,20 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       return;
     }
 
+    if (fromAsset.hasSwapLiquidity === false) {
+      setQuote(null);
+      setErrorMsg(`${fromAsset.symbol} has low DEX liquidity on ${fromAsset.chain}. Swapping from this asset is currently unavailable.`);
+      setIsLoadingQuote(false);
+      return;
+    }
+
+    if (toAsset.hasSwapLiquidity === false) {
+      setQuote(null);
+      setErrorMsg(`${toAsset.symbol} has low DEX liquidity on ${toAsset.chain}. Swapping to this asset is currently unavailable.`);
+      setIsLoadingQuote(false);
+      return;
+    }
+
     setIsLoadingQuote(true);
     setErrorMsg(null);
 
@@ -308,8 +322,15 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </button>
               </div>
 
-              <div className="mt-1 text-[11px] text-slate-400 font-medium">
-                ≈ ${quote?.fromAmountUsd ? quote.fromAmountUsd.toFixed(2) : (parsedFromAmount * fromAsset.priceUsd).toFixed(2)} USD ({fromAsset.chain})
+              <div className="mt-1 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400 font-medium">
+                  ≈ ${quote?.fromAmountUsd ? quote.fromAmountUsd.toFixed(2) : (parsedFromAmount * fromAsset.priceUsd).toFixed(2)} USD ({fromAsset.chain})
+                </span>
+                {fromAsset.hasSwapLiquidity === false && (
+                  <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-300">
+                    Low Liquidity
+                  </span>
+                )}
               </div>
             </div>
 
@@ -368,8 +389,15 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </button>
               </div>
 
-              <div className="mt-1 text-[11px] text-slate-400 font-medium">
-                ≈ ${quote?.toAmountUsd ? quote.toAmountUsd.toFixed(2) : (parseFloat(quote?.toAmount || '0') * toAsset.priceUsd).toFixed(2)} USD ({toAsset.chain})
+              <div className="mt-1 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400 font-medium">
+                  ≈ ${quote?.toAmountUsd ? quote.toAmountUsd.toFixed(2) : (parseFloat(quote?.toAmount || '0') * toAsset.priceUsd).toFixed(2)} USD ({toAsset.chain})
+                </span>
+                {toAsset.hasSwapLiquidity === false && (
+                  <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-300">
+                    Low Liquidity
+                  </span>
+                )}
               </div>
             </div>
 
@@ -449,19 +477,23 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             <button
               type="button"
               onClick={handleExecuteSwap}
-              disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
-              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
-                  ? 'bg-red-50 text-red-500 cursor-not-allowed'
-                  : parsedFromAmount <= 0
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-[#1C1C1E] text-white hover:bg-black'
+              disabled={isExecuting || isInsufficient || parsedFromAmount <= 0 || fromAsset.hasSwapLiquidity === false || toAsset.hasSwapLiquidity === false || !quote}
+              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${fromAsset.hasSwapLiquidity === false || toAsset.hasSwapLiquidity === false
+                  ? 'bg-amber-100 text-amber-800 border border-amber-300 cursor-not-allowed shadow-none'
+                  : isInsufficient
+                    ? 'bg-red-50 text-red-500 cursor-not-allowed'
+                    : parsedFromAmount <= 0 || !quote
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-[#1C1C1E] text-white hover:bg-black'
                 }`}
             >
-              {isInsufficient
-                ? 'Insufficient Balance'
-                : isExecuting
-                  ? 'Executing Swap...'
-                  : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
+              {fromAsset.hasSwapLiquidity === false || toAsset.hasSwapLiquidity === false
+                ? 'Low Liquidity (Swap Unavailable)'
+                : isInsufficient
+                  ? 'Insufficient Balance'
+                  : isExecuting
+                    ? 'Executing Swap...'
+                    : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
             </button>
           </div>
         </div>

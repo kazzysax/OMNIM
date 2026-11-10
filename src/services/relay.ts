@@ -117,6 +117,9 @@ export async function fetchLiFiQuote(
     if (rawMsg.toLowerCase().includes('no available quotes') || rawMsg.toLowerCase().includes('no route found')) {
       throw new Error(`No direct route found for ${fromAsset.symbol} to ${toAsset.symbol}. Try swapping to USDT or POL first.`);
     }
+    if (rawMsg.toLowerCase().includes('deny list') || rawMsg.toLowerCase().includes('could not find token') || rawMsg.toLowerCase().includes('invalid')) {
+      throw new Error(`No active DEX liquidity route found for ${toAsset.symbol} on ${toAsset.chain}.`);
+    }
     throw new Error(rawMsg || `Li.Fi route error: HTTP ${res.status}`);
   }
 
@@ -423,6 +426,14 @@ export async function getSwapQuote(
       fromAsset.contractAddress.toLowerCase() === toAsset.contractAddress.toLowerCase())
   ) {
     throw new Error('Cannot swap an asset for itself. Please choose a different destination asset.');
+  }
+
+  // 1b. Prevent swaps for tokens flagged with low/no liquidity
+  if (fromAsset.hasSwapLiquidity === false) {
+    throw new Error(`${fromAsset.symbol} currently has low DEX liquidity on ${fromAsset.chain}. Swaps are unavailable.`);
+  }
+  if (toAsset.hasSwapLiquidity === false) {
+    throw new Error(`${toAsset.symbol} currently has low DEX liquidity on ${toAsset.chain}. Swaps are unavailable.`);
   }
 
   const isFromNim = fromAsset.symbol === 'NIM';

@@ -120,7 +120,7 @@ export const AssetCard: React.FC<AssetCardProps> = ({ asset, onSwapAsset, onView
         </div>
 
         <div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="font-bold text-white text-sm group-hover:text-[#E5B887] transition-colors">
               {asset.symbol}
             </span>
@@ -130,6 +130,11 @@ export const AssetCard: React.FC<AssetCardProps> = ({ asset, onSwapAsset, onView
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 font-medium">
               ${asset.priceUsd < 0.01 ? asset.priceUsd.toFixed(6) : asset.priceUsd.toFixed(2)}
             </span>
+            {asset.hasSwapLiquidity === false && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold tracking-tight">
+                Low Liquidity
+              </span>
+            )}
           </div>
           <div className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
             <span className="truncate max-w-[130px]">{asset.name}</span>

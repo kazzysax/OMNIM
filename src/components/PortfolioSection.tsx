@@ -178,9 +178,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       <div
         key={asset.id}
         onClick={() => onSelectAssetForSwap(asset)}
-        className={`rounded-2xl bg-white border p-3.5 flex items-center justify-between shadow-sm cursor-pointer hover:bg-slate-50 transition-all ${
-          isOwned ? 'border-amber-200/80 bg-gradient-to-r from-amber-500/[0.02] to-white ring-1 ring-amber-500/10' : 'border-slate-100'
-        }`}
+        className={`rounded-2xl bg-white border p-3.5 flex items-center justify-between shadow-sm cursor-pointer hover:bg-slate-50 transition-all ${isOwned ? 'border-amber-200/80 bg-gradient-to-r from-amber-500/[0.02] to-white ring-1 ring-amber-500/10' : 'border-slate-100'
+          }`}
       >
         <div className="flex items-center gap-3">
           <div
@@ -208,9 +207,14 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
           </div>
 
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-bold text-xs text-slate-900">{asset.name}</span>
               {renderChainBadge(asset)}
+              {asset.hasSwapLiquidity === false && (
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300 font-semibold tracking-tight">
+                  Low Liquidity
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[11px] text-slate-500 font-mono">
@@ -239,9 +243,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
             ${holdingUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
           <div
-            className={`text-[10px] font-semibold flex items-center justify-end gap-0.5 ${
-              isPositive ? 'text-emerald-600' : 'text-red-500'
-            }`}
+            className={`text-[10px] font-semibold flex items-center justify-end gap-0.5 ${isPositive ? 'text-emerald-600' : 'text-red-500'
+              }`}
           >
             <span>{isPositive ? '+' : ''}{(asset.change24h || 0).toFixed(2)}%</span>
           </div>
@@ -297,13 +300,12 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
 
         {/* 24h Whole Portfolio Profit/Loss Summary Card (Replaces Bitcoin Card) */}
         <div
-          className={`flex-1 h-[72px] rounded-2xl bg-white border p-2.5 px-3 flex items-center justify-between shadow-sm transition-all ${
-            holdings.length > 0 && isPnlPositive
+          className={`flex-1 h-[72px] rounded-2xl bg-white border p-2.5 px-3 flex items-center justify-between shadow-sm transition-all ${holdings.length > 0 && isPnlPositive
               ? 'border-emerald-200/80 bg-gradient-to-r from-emerald-500/[0.04] to-white ring-1 ring-emerald-500/10'
               : holdings.length > 0 && !isPnlPositive
-              ? 'border-red-200/80 bg-gradient-to-r from-red-500/[0.04] to-white ring-1 ring-red-500/10'
-              : 'border-slate-100'
-          }`}
+                ? 'border-red-200/80 bg-gradient-to-r from-red-500/[0.04] to-white ring-1 ring-red-500/10'
+                : 'border-slate-100'
+            }`}
         >
           {/* Left: 24h Profit / Loss & Dollar Amount */}
           <div className="flex flex-col justify-center">
@@ -316,20 +318,19 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
               <span>24h Portfolio P&L</span>
             </div>
             <div
-              className={`font-bold text-sm leading-tight mt-0.5 ${
-                holdings.length === 0
+              className={`font-bold text-sm leading-tight mt-0.5 ${holdings.length === 0
                   ? 'text-slate-800'
                   : isPnlPositive
-                  ? 'text-emerald-600'
-                  : 'text-red-500'
-              }`}
+                    ? 'text-emerald-600'
+                    : 'text-red-500'
+                }`}
             >
               {holdings.length === 0
                 ? '$0.00'
                 : `${isPnlPositive ? '+' : '-'}$${Math.abs(total24hPnlUsd).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`}
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`}
             </div>
           </div>
 
@@ -339,13 +340,12 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
               {renderPortfolioSparkline()}
             </div>
             <div
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg whitespace-nowrap ${
-                holdings.length === 0
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg whitespace-nowrap ${holdings.length === 0
                   ? 'bg-slate-100 text-slate-500'
                   : isPnlPositive
-                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50'
-                  : 'bg-red-50 text-red-500 border border-red-200/50'
-              }`}
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50'
+                    : 'bg-red-50 text-red-500 border border-red-200/50'
+                }`}
             >
               {holdings.length > 0 && isPnlPositive ? '+' : ''}
               {total24hPnlPercent.toFixed(2)}%

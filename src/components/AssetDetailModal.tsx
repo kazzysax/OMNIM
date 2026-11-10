@@ -25,7 +25,7 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-sm bg-white rounded-t-[32px] sm:rounded-[32px] p-5 max-h-[88vh] flex flex-col shadow-2xl overflow-y-auto text-slate-900 border border-slate-100">
-        
+
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -50,9 +50,9 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
             style={{ backgroundColor: `${asset.color}12` }}
           >
             {asset.logoUrl ? (
-              <img 
-                src={asset.logoUrl} 
-                alt={asset.symbol} 
+              <img
+                src={asset.logoUrl}
+                alt={asset.symbol}
                 className="w-full h-full object-contain rounded-full"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
@@ -61,7 +61,7 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
                 }}
               />
             ) : null}
-            <span 
+            <span
               className="items-center justify-center"
               style={{ display: asset.logoUrl ? 'none' : 'flex' }}
             >
@@ -115,8 +115,8 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
               <span>Verified Contract</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-800 text-[11px] font-semibold">
-                  {asset.contractAddress.length > 16 
-                    ? `${asset.contractAddress.slice(0, 8)}...${asset.contractAddress.slice(-6)}` 
+                  {asset.contractAddress.length > 16
+                    ? `${asset.contractAddress.slice(0, 8)}...${asset.contractAddress.slice(-6)}`
                     : asset.contractAddress}
                 </span>
                 {asset.contractAddress.startsWith('0x') && (
@@ -137,6 +137,19 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
           </div>
         </div>
 
+        {/* Low Liquidity Alert if applicable */}
+        {asset.hasSwapLiquidity === false && (
+          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200/80 mb-3 text-xs text-amber-900 flex items-start gap-2.5">
+            <span className="text-base leading-none mt-0.5">⚠️</span>
+            <div>
+              <div className="font-bold">Low DEX Liquidity</div>
+              <div className="text-[11px] text-amber-800/90 mt-0.5">
+                {asset.liquidityNote || `Decentralized pool liquidity for ${asset.symbol} is limited on ${asset.chain}. Swaps are currently unavailable.`}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex items-center gap-2 mt-auto">
           <a
@@ -151,13 +164,18 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
 
           <button
             onClick={() => {
+              if (asset.hasSwapLiquidity === false) return;
               onClose();
               onOpenSwap(asset);
             }}
-            className="flex-2 py-3 px-5 rounded-2xl bg-slate-900 hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
+            disabled={asset.hasSwapLiquidity === false}
+            className={`flex-2 py-3 px-5 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all ${asset.hasSwapLiquidity === false
+                ? 'bg-amber-100 text-amber-800/80 border border-amber-300/80 cursor-not-allowed shadow-none'
+                : 'bg-slate-900 hover:bg-black text-white active:scale-95'
+              }`}
           >
             <ArrowRightLeft className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Swap {asset.symbol}</span>
+            <span>{asset.hasSwapLiquidity === false ? 'Swap Unavailable' : `Swap ${asset.symbol}`}</span>
           </button>
         </div>
       </div>

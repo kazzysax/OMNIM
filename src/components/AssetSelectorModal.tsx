@@ -101,7 +101,9 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                 className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all text-left ${
                   isSelected
                     ? 'bg-amber-50/70 border border-amber-300/80 shadow-sm'
-                    : 'bg-slate-50 hover:bg-slate-100/80 border border-slate-100'
+                    : asset.hasSwapLiquidity === false && isSwapContext
+                      ? 'bg-amber-50/30 hover:bg-amber-50/50 border border-amber-200/60'
+                      : 'bg-slate-50 hover:bg-slate-100/80 border border-slate-100'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -137,6 +139,11 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                       <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200/70 text-slate-700 font-mono font-medium">
                         {asset.chain}
                       </span>
+                      {asset.hasSwapLiquidity === false && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-semibold tracking-tight">
+                          Low Liquidity
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-500 truncate max-w-[170px]">
                       {asset.name}
