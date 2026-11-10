@@ -9,20 +9,23 @@ declare global {
 }
 
 let cachedNimiqProvider: any = null;
-let isInitializingNimiq = false;
+let initPromise: Promise<any> | null = null;
 
 async function getNimiqProvider() {
   if (cachedNimiqProvider) return cachedNimiqProvider;
-  if (isInitializingNimiq) return null;
-  isInitializingNimiq = true;
-  try {
-    cachedNimiqProvider = await init({ timeout: 3000 });
-  } catch (e) {
-    console.warn('Nimiq SDK init warning:', e);
-  } finally {
-    isInitializingNimiq = false;
+  if (!initPromise) {
+    initPromise = init({ timeout: 10000 })
+      .then((provider) => {
+        cachedNimiqProvider = provider;
+        return provider;
+      })
+      .catch((e) => {
+        console.warn('Nimiq SDK init warning:', e);
+        initPromise = null;
+        return null;
+      });
   }
-  return cachedNimiqProvider;
+  return initPromise;
 }
 
 export async function connectDualWallet(): Promise<WalletState> {
