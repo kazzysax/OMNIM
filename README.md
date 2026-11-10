@@ -1,6 +1,6 @@
-# OMNIM 🌐
+# OMNIM 
 
-> A high-performance, non-custodial multi-asset portfolio and cross-chain gateway built natively for the Nimiq Pay Mini-App ecosystem. Hold, swap, and manage native crypto, 10+ tokenized US equities on BNB Chain, physical commodities, and global fiat currencies directly inside Nimiq Pay.
+> A high-performance, non-custodial multi-asset portfolio and cross-chain gateway built natively for the Nimiq Pay Mini-App ecosystem. Hold, swap, and manage native crypto, 10+ tokenized US equities on BNB Chain, physical commodities, and global fiat currencies directly inside Nimiq Pay, giving users the autonomy to save or hold liquidity in any asset directly on nimiq app.
 
 [![Live Mini-App](https://img.shields.io/badge/Live%20App-omnim--io.vercel.app-E5B887?style=flat&logo=vercel)](https://omnim-io.vercel.app)
 [![Nimiq Mini-Apps](https://img.shields.io/badge/Nimiq-Mini--App%20SDK-E5B887?style=flat&logo=nimiq)](https://nimiq.dev/mini-apps)
@@ -21,7 +21,7 @@ Nimiq Pay provides one of the cleanest crypto payment experiences in Web3—inst
 3. **Wallet Fragmentation & Network Friction:** Managing cross-chain assets across EVM networks (BNB Chain, Polygon, Base, Arbitrum) typically requires importing private keys into multiple browser extensions, managing gas tokens, and switching RPCs manually.
 
 **OMNIM transforms Nimiq Pay into a comprehensive global wealth management suite.**  
-It bridges Nimiq’s browser-native L1 ecosystem with verified BEP-20 tokenized equities on BNB Chain, physical commodities, and regulated electronic fiat money—allowing users to invest, hold, and swap 39+ global assets directly from their existing Nimiq Pay app with zero manual seed phrase management.
+It bridges Nimiq’s browser-native L1 ecosystem with verified BEP-20 tokenized equities on BNB Chain, physical commodities, and regulated electronic fiat money—allowing users to invest, hold, and swap 39+ global assets directly from their existing Nimiq Pay app with zero manual seed phrase management, unlocking more ways to save and store value.
 
 Built for the **Nimiq Mini-Apps Challenge** • Track: **"Extend What Users Can Hold"**.
 
