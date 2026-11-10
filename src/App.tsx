@@ -127,10 +127,10 @@ export default function App() {
     // Initial fetch
     refreshWalletAndBalances();
 
-    // Fast polling every 3 seconds for instant deposit/swap reflection
+    // Regular polling every 7.5 seconds for snappy updates without network socket congestion
     const timer = setInterval(() => {
       refreshWalletAndBalances();
-    }, 3000);
+    }, 7500);
 
     // Instant refresh when window or mobile app resumes / focused
     const handleFocus = () => refreshWalletAndBalances();
@@ -266,33 +266,45 @@ export default function App() {
         })
       );
 
-      // 3. Fast EVM Multi-Chain balance query in parallel
+      // 3. Resilient EVM Multi-Chain balance query in controlled batches
       if (state.evmAddress) {
-        const evmBalances = await Promise.all(
-          INITIAL_ASSETS.map(async (asset) => {
-            if (asset.chainId > 0 && asset.contractAddress) {
-              const bal = await fetchRealEvmBalance(
-                asset.contractAddress,
-                state.evmAddress!,
-                asset.decimals,
-                asset.chainId
-              );
-              return { id: asset.id, bal };
-            }
-            return { id: asset.id, bal: 0 };
-          })
-        );
+        const chunkSize = 6;
+        const evmBalances: { id: string; bal: number | null }[] = [];
+
+        for (let i = 0; i < INITIAL_ASSETS.length; i += chunkSize) {
+          const chunk = INITIAL_ASSETS.slice(i, i + chunkSize);
+          const chunkResults = await Promise.all(
+            chunk.map(async (asset) => {
+              if (asset.chainId > 0 && asset.contractAddress) {
+                const bal = await fetchRealEvmBalance(
+                  asset.contractAddress,
+                  state.evmAddress!,
+                  asset.decimals,
+                  asset.chainId
+                );
+                return { id: asset.id, bal };
+              }
+              return { id: asset.id, bal: 0 };
+            })
+          );
+          evmBalances.push(...chunkResults);
+        }
 
         setAssets((prev) => {
           const updated = prev.map((asset) => {
             const found = evmBalances.find((e) => e.id === asset.id);
             if (found && asset.chainId > 0) {
-              return { ...asset, userBalance: found.bal };
+              // Only overwrite if a valid numeric balance was obtained
+              // If bal is null (temporary RPC network timeout), preserve previous userBalance!
+              if (found.bal !== null && typeof found.bal === 'number') {
+                return { ...asset, userBalance: found.bal };
+              }
+              return asset;
             }
             return asset;
           });
 
-          // Cache non-zero balances in localStorage for 0ms initial render
+          // Cache non-zero balances in localStorage for 0ms instant initial render
           try {
             const balanceMap: Record<string, number> = {};
             updated.forEach((a) => {

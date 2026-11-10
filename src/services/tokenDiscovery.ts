@@ -15,12 +15,32 @@ import type { Asset } from '../types';
 
 /** RPC endpoints per chain (fallbacks in order). */
 const CHAIN_RPC_MAP: Record<number, string[]> = {
-  56: ['https://bsc.publicnode.com', 'https://1rpc.io/bnb'],
-  137: ['https://polygon-bor-rpc.publicnode.com', 'https://1rpc.io/matic'],
-  8453: ['https://mainnet.base.org', 'https://1rpc.io/base'],
-  42161: ['https://arbitrum-one-rpc.publicnode.com', 'https://arb1.arbitrum.io/rpc'],
-  10: ['https://optimism-rpc.publicnode.com'],
-  43114: ['https://avalanche-c-chain-rpc.publicnode.com'],
+  56: ['https://bsc.publicnode.com', 'https://56.rpc.thirdweb.com'],
+  137: [
+    'https://polygon-bor-rpc.publicnode.com',
+    'https://polygon.gateway.tenderly.co',
+    'https://137.rpc.thirdweb.com',
+    'https://polygon.drpc.org',
+  ],
+  8453: [
+    'https://mainnet.base.org',
+    'https://8453.rpc.thirdweb.com',
+    'https://base.gateway.tenderly.co',
+  ],
+  42161: [
+    'https://arbitrum-one-rpc.publicnode.com',
+    'https://arb1.arbitrum.io/rpc',
+    'https://42161.rpc.thirdweb.com',
+  ],
+  10: [
+    'https://optimism-rpc.publicnode.com',
+    'https://mainnet.optimism.io',
+    'https://10.rpc.thirdweb.com',
+  ],
+  43114: [
+    'https://avalanche-c-chain-rpc.publicnode.com',
+    'https://api.avax.network/ext/bc/C/rpc',
+  ],
 };
 
 /** Common popular tokens per chain as discovery fallback */

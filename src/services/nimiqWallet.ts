@@ -111,12 +111,32 @@ export async function connectDualWallet(): Promise<WalletState> {
 }
 
 export const CHAIN_RPC_MAP: Record<number, string[]> = {
-  56: ['https://bsc.publicnode.com', 'https://1rpc.io/bnb'],
-  137: ['https://polygon-bor-rpc.publicnode.com', 'https://1rpc.io/matic'],
-  8453: ['https://mainnet.base.org', 'https://1rpc.io/base'],
-  42161: ['https://arbitrum-one-rpc.publicnode.com', 'https://arb1.arbitrum.io/rpc'],
-  10: ['https://optimism-rpc.publicnode.com'],
-  43114: ['https://avalanche-c-chain-rpc.publicnode.com'],
+  56: ['https://bsc.publicnode.com', 'https://56.rpc.thirdweb.com'],
+  137: [
+    'https://polygon-bor-rpc.publicnode.com',
+    'https://polygon.gateway.tenderly.co',
+    'https://137.rpc.thirdweb.com',
+    'https://polygon.drpc.org',
+  ],
+  8453: [
+    'https://mainnet.base.org',
+    'https://8453.rpc.thirdweb.com',
+    'https://base.gateway.tenderly.co',
+  ],
+  42161: [
+    'https://arbitrum-one-rpc.publicnode.com',
+    'https://arb1.arbitrum.io/rpc',
+    'https://42161.rpc.thirdweb.com',
+  ],
+  10: [
+    'https://optimism-rpc.publicnode.com',
+    'https://mainnet.optimism.io',
+    'https://10.rpc.thirdweb.com',
+  ],
+  43114: [
+    'https://avalanche-c-chain-rpc.publicnode.com',
+    'https://api.avax.network/ext/bc/C/rpc',
+  ],
 };
 
 export async function fetchRealEvmBalance(
@@ -124,8 +144,8 @@ export async function fetchRealEvmBalance(
   userAddress: string,
   decimals: number = 18,
   chainId: number = 56
-): Promise<number> {
-  if (!userAddress) return 0;
+): Promise<number | null> {
+  if (!userAddress) return null;
 
   const isNative =
     !tokenAddress ||
@@ -153,32 +173,40 @@ export async function fetchRealEvmBalance(
       ],
     };
 
-  // 1. Try injected window.ethereum first for Polygon (instant 0ms IPC call)
-  if (typeof window !== 'undefined' && window.ethereum && (chainId === 137 || !chainId)) {
+  // 1. Try injected window.ethereum first ONLY if the wallet is currently connected to this specific chain
+  if (typeof window !== 'undefined' && window.ethereum) {
     try {
-      if (isNative) {
-        const balanceWeiHex = await window.ethereum.request({
-          method: 'eth_getBalance',
-          params: [userAddress, 'latest'],
-        });
-        if (balanceWeiHex && balanceWeiHex !== '0x') {
-          const balanceBig = BigInt(balanceWeiHex);
-          return Number(balanceBig) / Math.pow(10, decimals);
-        }
-      } else {
-        const balanceHex = await window.ethereum.request({
-          method: 'eth_call',
-          params: [
-            {
-              to: tokenAddress,
-              data: '0x70a08231' + cleanAddr,
-            },
-            'latest',
-          ],
-        });
-        if (balanceHex && balanceHex !== '0x') {
-          const balanceBig = BigInt(balanceHex);
-          return Number(balanceBig) / Math.pow(10, decimals);
+      let isWindowEthereumOnThisChain = false;
+      const currentChainHex = window.ethereum.chainId || (await window.ethereum.request({ method: 'eth_chainId' }));
+      if (currentChainHex && parseInt(currentChainHex, 16) === chainId) {
+        isWindowEthereumOnThisChain = true;
+      }
+
+      if (isWindowEthereumOnThisChain) {
+        if (isNative) {
+          const balanceWeiHex = await window.ethereum.request({
+            method: 'eth_getBalance',
+            params: [userAddress, 'latest'],
+          });
+          if (balanceWeiHex && balanceWeiHex !== '0x') {
+            const balanceBig = BigInt(balanceWeiHex);
+            return Number(balanceBig) / Math.pow(10, decimals);
+          }
+        } else {
+          const balanceHex = await window.ethereum.request({
+            method: 'eth_call',
+            params: [
+              {
+                to: tokenAddress,
+                data: '0x70a08231' + cleanAddr,
+              },
+              'latest',
+            ],
+          });
+          if (balanceHex && balanceHex !== '0x') {
+            const balanceBig = BigInt(balanceHex);
+            return Number(balanceBig) / Math.pow(10, decimals);
+          }
         }
       }
     } catch { }
@@ -186,11 +214,11 @@ export async function fetchRealEvmBalance(
 
   const rpcs = CHAIN_RPC_MAP[chainId] || [];
 
-  // Fast fetch function with 2200ms timeout
+  // Fast fetch function with 2800ms timeout
   const fetchSingleRpc = async (rpcUrl: string): Promise<number> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2800);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2200);
       const res = await fetch(rpcUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,17 +227,26 @@ export async function fetchRealEvmBalance(
       });
       clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const json = await res.json();
-        if (json.result && json.result !== '0x') {
-          const balanceBig = BigInt(json.result);
-          return Number(balanceBig) / Math.pow(10, decimals);
-        }
-        return 0;
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} from ${rpcUrl}`);
       }
-      return 0;
-    } catch {
-      return 0;
+
+      const json = await res.json();
+      if (json.error) {
+        throw new Error(`RPC error from ${rpcUrl}: ${json.error.message || JSON.stringify(json.error)}`);
+      }
+
+      if (typeof json.result === 'string') {
+        if (json.result === '0x' || json.result === '0x0') {
+          return 0;
+        }
+        const balanceBig = BigInt(json.result);
+        return Number(balanceBig) / Math.pow(10, decimals);
+      }
+      throw new Error(`Invalid RPC result format from ${rpcUrl}`);
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
     }
   };
 
@@ -218,11 +255,11 @@ export async function fetchRealEvmBalance(
     try {
       return await Promise.any(rpcs.map((url) => fetchSingleRpc(url)));
     } catch {
-      // Fall through to window.ethereum
+      // All RPCs in Promise.any failed, fall through to window.ethereum fallback
     }
   }
 
-  // 3. Fallback to injected window.ethereum
+  // 3. Fallback to injected window.ethereum as last resort
   if (typeof window !== 'undefined' && window.ethereum) {
     try {
       if (isNative) {
@@ -252,11 +289,11 @@ export async function fetchRealEvmBalance(
         }
       }
     } catch {
-      return 0;
+      return null;
     }
   }
 
-  return 0;
+  return null;
 }
 
 export async function executeNimTransfer(params: {

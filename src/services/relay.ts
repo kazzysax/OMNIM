@@ -72,12 +72,21 @@ export async function fetchLiFiQuote(
   url.searchParams.set('fromChain', fromAsset.chainId.toString());
   url.searchParams.set('toChain', toAsset.chainId.toString());
 
-  const fromCurrency = fromAsset.contractAddress.startsWith('0x')
-    ? fromAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
-  const toCurrency = toAsset.contractAddress.startsWith('0x')
-    ? toAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
+  const isFromNative =
+    !fromAsset.contractAddress ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+  const isToNative =
+    !toAsset.contractAddress ||
+    toAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    toAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+
+  const fromCurrency = isFromNative
+    ? '0x0000000000000000000000000000000000000000'
+    : fromAsset.contractAddress;
+  const toCurrency = isToNative
+    ? '0x0000000000000000000000000000000000000000'
+    : toAsset.contractAddress;
 
   url.searchParams.set('fromToken', fromCurrency);
   url.searchParams.set('toToken', toCurrency);
@@ -98,7 +107,7 @@ export async function fetchLiFiQuote(
       res = await fetch(url.toString(), { signal: controller.signal });
       clearTimeout(timer);
     } catch {
-      throw new Error('Routing network connection busy. Please retry in a few seconds.');
+      throw new Error('Li.Fi routing service temporary network error.');
     }
   }
 
@@ -234,15 +243,24 @@ export async function fetchRelayQuote(
   parsedFromAmount: number,
   userEvmAddress: string
 ): Promise<SwapQuote> {
+  const isFromNative =
+    !fromAsset.contractAddress ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    fromAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+  const isToNative =
+    !toAsset.contractAddress ||
+    toAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    toAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+
   const originChainId = fromAsset.chainId;
-  const originCurrency = fromAsset.contractAddress.startsWith('0x')
-    ? fromAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
+  const originCurrency = isFromNative
+    ? '0x0000000000000000000000000000000000000000'
+    : fromAsset.contractAddress;
 
   const destinationChainId = toAsset.chainId;
-  const destinationCurrency = toAsset.contractAddress.startsWith('0x')
-    ? toAsset.contractAddress
-    : '0x0000000000000000000000000000000000000000';
+  const destinationCurrency = isToNative
+    ? '0x0000000000000000000000000000000000000000'
+    : toAsset.contractAddress;
 
   const relayAmount = toAtomicUnits(parsedFromAmount, fromAsset.decimals);
 
@@ -433,7 +451,11 @@ export async function getSwapQuote(
       try {
         return await fetchRelayQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
       } catch (relayErr: any) {
-        throw new Error(lifiErr.message || relayErr.message);
+        const msg = lifiErr.message || relayErr.message || '';
+        if (msg.includes('temporary network error') || msg.includes('timed out')) {
+          throw new Error('Routing network temporarily busy. Please retry in a few seconds.');
+        }
+        throw new Error(lifiErr.message || relayErr.message || 'No swap route currently available.');
       }
     }
   }
@@ -446,7 +468,11 @@ export async function getSwapQuote(
     try {
       return await fetchLiFiQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
     } catch (lifiErr: any) {
-      throw new Error(relayErr.message || lifiErr.message);
+      const msg = relayErr.message || lifiErr.message || '';
+      if (msg.includes('temporary network error') || msg.includes('timed out')) {
+        throw new Error('Routing network temporarily busy. Please retry in a few seconds.');
+      }
+      throw new Error(relayErr.message || lifiErr.message || 'No swap route currently available.');
     }
   }
 }
