@@ -82,9 +82,6 @@ export async function connectDualWallet(): Promise<WalletState> {
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
       if (accounts && accounts.length > 0) {
         evmAddress = accounts[0];
-      } else {
-        const requested = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (requested && requested.length > 0) evmAddress = requested[0];
       }
 
       const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
@@ -359,6 +356,18 @@ export async function executeEvmTransaction(params: {
           formattedValue = '0x0';
         }
       }
+    }
+
+    if (!params.from) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          params.from = accounts[0];
+        } else {
+          const req = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (req && req.length > 0) params.from = req[0];
+        }
+      } catch { }
     }
 
     const txPayload: any = {
