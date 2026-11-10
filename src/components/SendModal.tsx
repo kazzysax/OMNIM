@@ -63,6 +63,7 @@ export const SendModal: React.FC<SendModalProps> = ({
     setIsSending(true);
     setIsError(false);
     setStatusMessage('Preparing transaction...');
+    let finalTxHash: string | undefined;
 
     try {
       if (selectedAsset.symbol === 'NIM') {
@@ -71,7 +72,7 @@ export const SendModal: React.FC<SendModalProps> = ({
         }
 
         setStatusMessage('Signing in Nimiq Pay...');
-        await executeNimTransfer({
+        finalTxHash = await executeNimTransfer({
           recipient: trimmedRecipient,
           valueInLuna: Math.round(parsedAmount * 100000),
         });
@@ -83,14 +84,13 @@ export const SendModal: React.FC<SendModalProps> = ({
 
         setStatusMessage(`Switching wallet to ${selectedAsset.chain}...`);
 
-        let txHash = '';
         if (isNative) {
           // Native token transfer (e.g. POL on Polygon, BNB on BSC, ETH on Base)
           const rawAtomic = toAtomicUnits(parsedAmount, selectedAsset.decimals);
           const valueHex = '0x' + BigInt(rawAtomic).toString(16);
 
           setStatusMessage(`Please confirm sending ${parsedAmount} ${selectedAsset.symbol} on ${selectedAsset.chain}...`);
-          txHash = await executeEvmTransaction({
+          finalTxHash = await executeEvmTransaction({
             to: trimmedRecipient,
             value: valueHex,
             data: '0x',
@@ -105,7 +105,7 @@ export const SendModal: React.FC<SendModalProps> = ({
           const calldata = '0xa9059cbb' + cleanRecipient + amountHex;
 
           setStatusMessage(`Please confirm sending ${parsedAmount} ${selectedAsset.symbol} on ${selectedAsset.chain}...`);
-          txHash = await executeEvmTransaction({
+          finalTxHash = await executeEvmTransaction({
             to: selectedAsset.contractAddress,
             value: '0x0',
             data: calldata,
@@ -114,16 +114,16 @@ export const SendModal: React.FC<SendModalProps> = ({
           });
         }
 
-        if (txHash) {
-          const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
+        if (finalTxHash) {
+          const shortHash = `${finalTxHash.slice(0, 6)}...${finalTxHash.slice(-4)}`;
           setStatusMessage(`Transaction submitted (${shortHash}). Confirming on ${selectedAsset.chain}...`);
-          await waitForEvmReceipt(txHash, selectedAsset.chainId);
+          await waitForEvmReceipt(finalTxHash, selectedAsset.chainId);
         }
       }
 
       setIsSuccess(true);
       setStatusMessage(`Sent ${parsedAmount} ${selectedAsset.symbol}!`);
-      onSendSuccess(selectedAsset, parsedAmount, txHash, trimmedRecipient);
+      onSendSuccess(selectedAsset, parsedAmount, finalTxHash, trimmedRecipient);
 
       setTimeout(() => {
         setIsSending(false);

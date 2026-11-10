@@ -8,6 +8,23 @@ declare global {
   }
 }
 
+let cachedNimiqProvider: any = null;
+let isInitializingNimiq = false;
+
+async function getNimiqProvider() {
+  if (cachedNimiqProvider) return cachedNimiqProvider;
+  if (isInitializingNimiq) return null;
+  isInitializingNimiq = true;
+  try {
+    cachedNimiqProvider = await init({ timeout: 3000 });
+  } catch (e) {
+    console.warn('Nimiq SDK init warning:', e);
+  } finally {
+    isInitializingNimiq = false;
+  }
+  return cachedNimiqProvider;
+}
+
 export async function connectDualWallet(): Promise<WalletState> {
   const isInsideNimiqPay = typeof window !== 'undefined' && (!!window.nimiq || !!window.ethereum);
 
@@ -19,7 +36,7 @@ export async function connectDualWallet(): Promise<WalletState> {
   let lastBlockHeight = 0;
 
   try {
-    const nimiqProvider = await init({ timeout: 4000 });
+    const nimiqProvider = await getNimiqProvider();
     if (nimiqProvider) {
       const accounts = await nimiqProvider.listAccounts();
       if (accounts && accounts.length > 0) {
@@ -32,7 +49,9 @@ export async function connectDualWallet(): Promise<WalletState> {
       }
 
       if (typeof nimiqProvider.isConsensusEstablished === 'function') {
-        isConsensusEstablished = await nimiqProvider.isConsensusEstablished();
+        try {
+          isConsensusEstablished = await nimiqProvider.isConsensusEstablished();
+        } catch { }
       }
 
       if (typeof nimiqProvider.getBlockNumber === 'function') {

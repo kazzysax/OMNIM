@@ -271,3 +271,4 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
     </div>
   );
 };
+

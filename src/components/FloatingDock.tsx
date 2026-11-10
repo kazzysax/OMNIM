@@ -21,8 +21,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           onClick={() => onTabChange('dashboard')}
           title="Wallet"
           className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'dashboard'
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
+            ? 'text-white'
+            : 'text-slate-400 hover:text-white'
             }`}
         >
           <Wallet className="w-5 h-5 stroke-[2]" />
@@ -32,8 +32,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           onClick={() => onTabChange('history')}
           title="Transaction History"
           className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'history'
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
+            ? 'text-white'
+            : 'text-slate-400 hover:text-white'
             }`}
         >
           <Database className="w-5 h-5 stroke-[2]" />
@@ -43,8 +43,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           onClick={onOpenSwap}
           title="Swap"
           className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'swap'
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
+            ? 'text-white'
+            : 'text-slate-400 hover:text-white'
             }`}
         >
           <CircleDollarSign className="w-5 h-5 stroke-[2]" />
@@ -54,8 +54,8 @@ export const FloatingDock: React.FC<FloatingDockProps> = ({
           onClick={() => onTabChange('profile')}
           title="Account"
           className={`p-1.5 rounded-full transition-all active:scale-90 ${activeTab === 'profile'
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
+            ? 'text-white'
+            : 'text-slate-400 hover:text-white'
             }`}
         >
           <User className="w-5 h-5 stroke-[2]" />
