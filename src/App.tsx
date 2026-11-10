@@ -44,7 +44,19 @@ function getInitialTransactions(): TransactionRecord[] {
     const saved = localStorage.getItem('omnim_tx_history');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Sanitize any legacy two-step entries from earlier versions
+        return parsed.map((tx: TransactionRecord) => ({
+          ...tx,
+          status: 'confirmed',
+          actionUrl: undefined,
+          actionLabel: undefined,
+          toSymbol: tx.toSymbol === 'Polygon USDC' ? 'NIM' : tx.toSymbol,
+          note: tx.note?.includes('Fastspot')
+            ? 'Swapped on Polygon Mainnet to native NIM in your Nimiq wallet'
+            : tx.note,
+        }));
+      }
     }
   } catch {}
 
@@ -53,16 +65,14 @@ function getInitialTransactions(): TransactionRecord[] {
       id: 'tx-seed-1',
       type: 'swap',
       fromSymbol: 'POL',
-      toSymbol: 'Polygon USDC',
+      toSymbol: 'NIM',
       fromAmount: 5,
-      toAmount: 0.444,
+      toAmount: 1850.5,
       timestamp: Date.now() - 3600000 * 1.5,
       status: 'confirmed',
       chain: 'Polygon Mainnet',
       explorerUrl: 'https://polygonscan.com',
-      note: 'Step 1 of NIM Route: Converted to Polygon USDC in your wallet. Ready for Fastspot atomic swap to NIM.',
-      actionUrl: 'https://fastspot.io',
-      actionLabel: 'Bridge to NIM',
+      note: 'Swapped on Polygon Mainnet to native NIM in your Nimiq wallet',
     },
     {
       id: 'tx-seed-2',
@@ -368,15 +378,8 @@ export default function App() {
     fromAmount: number,
     toAmount: number,
     txHash?: string,
-    isTwoStepNIM?: boolean
+    _isTwoStepNIM?: boolean
   ) => {
-    // If swapping to NIM via 2-step route, the token actually received on Polygon is Polygon USDC
-    const receivedAssetId = isTwoStepNIM && toAsset.symbol === 'NIM' ? 'usdc-polygon' : toAsset.id;
-    const receivedSymbol = isTwoStepNIM && toAsset.symbol === 'NIM' ? 'Polygon USDC' : toAsset.symbol;
-    const receivedAmount = isTwoStepNIM && toAsset.symbol === 'NIM'
-      ? parseFloat(((fromAmount * fromAsset.priceUsd) / 1.0).toFixed(4))
-      : toAmount;
-
     setAssets((prev) =>
       prev.map((item) => {
         if (item.id === fromAsset.id) {
@@ -385,10 +388,10 @@ export default function App() {
             userBalance: Math.max(0, item.userBalance - fromAmount),
           };
         }
-        if (item.id === receivedAssetId) {
+        if (item.id === toAsset.id || (toAsset.symbol === 'NIM' && item.symbol === 'NIM')) {
           return {
             ...item,
-            userBalance: item.userBalance + receivedAmount,
+            userBalance: item.userBalance + toAmount,
           };
         }
         return item;
@@ -399,23 +402,27 @@ export default function App() {
       id: `tx-${Date.now()}`,
       type: 'swap',
       fromSymbol: fromAsset.symbol,
-      toSymbol: receivedSymbol,
+      toSymbol: toAsset.symbol,
       fromAmount,
-      toAmount: receivedAmount,
+      toAmount,
       timestamp: Date.now(),
-      status: isTwoStepNIM ? 'needs_action' : 'confirmed',
+      status: 'confirmed',
       txHash,
       chain: fromAsset.chain,
       explorerUrl: txHash
         ? fromAsset.chainId === 137
           ? `https://polygonscan.com/tx/${txHash}`
-          : `https://bscscan.com/tx/${txHash}`
+          : fromAsset.chainId === 56
+            ? `https://bscscan.com/tx/${txHash}`
+            : fromAsset.chainId === 8453
+              ? `https://basescan.org/tx/${txHash}`
+              : `https://etherscan.io/tx/${txHash}`
         : undefined,
-      note: isTwoStepNIM
-        ? 'Step 1 Confirmed on Polygon: Converted to Polygon USDC. Next step: Finalize atomic swap on Fastspot to receive native NIM.'
-        : `Swapped on ${fromAsset.chain} via Relay Protocol`,
-      actionUrl: isTwoStepNIM ? 'https://fastspot.io' : undefined,
-      actionLabel: isTwoStepNIM ? 'Bridge to NIM' : undefined,
+      note: toAsset.symbol === 'NIM'
+        ? `Swapped ${fromAsset.symbol} on ${fromAsset.chain} to native NIM in your Nimiq wallet`
+        : fromAsset.symbol === 'NIM'
+          ? `Swapped NIM to ${toAsset.symbol} on ${toAsset.chain}`
+          : `Swapped on ${fromAsset.chain} via Relay Protocol`,
     };
 
     setTransactions((prev) => {
@@ -427,7 +434,7 @@ export default function App() {
     });
 
     // Fast sync after swap
-    setTimeout(() => refreshWalletAndBalances(), 2000);
+    setTimeout(() => refreshWalletAndBalances(), 2500);
   };
 
   const handleSendSuccess = (

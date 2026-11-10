@@ -14,14 +14,13 @@ import {
 
 interface TransactionHistoryViewProps {
   transactions: TransactionRecord[];
-  polygonUsdcBalance: number;
+  polygonUsdcBalance?: number;
   onClearHistory: () => void;
   onOpenSwap: () => void;
 }
 
 export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   transactions,
-  polygonUsdcBalance,
   onClearHistory,
   onOpenSwap,
 }) => {
@@ -63,35 +62,6 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
           </button>
         )}
       </div>
-
-      {/* Fastspot Bridge Callout if holding Polygon USDC from previous swap */}
-      {polygonUsdcBalance > 0 && (
-        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-bold text-amber-900">Polygon USDC in Wallet</span>
-            </div>
-            <span className="font-mono text-xs font-bold text-amber-700">
-              {polygonUsdcBalance.toFixed(4)} USDC
-            </span>
-          </div>
-
-          <p className="text-[11px] text-amber-900/80 leading-relaxed">
-            Your recent swap converted assets to <strong>Polygon USDC</strong>. To receive native NIM in your Nimiq Pay wallet, complete the non-custodial atomic swap on Fastspot.
-          </p>
-
-          <a
-            href="https://fastspot.io"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#E5B887] hover:bg-[#d9a973] text-slate-900 font-bold text-xs shadow-sm transition-all active:scale-[0.98]"
-          >
-            <span>Bridge USDC to NIM on Fastspot</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-200/70 border border-slate-300/40 text-xs font-semibold">
@@ -239,18 +209,6 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {tx.actionUrl && (
-                    <a
-                      href={tx.actionUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-bold text-amber-700 hover:underline flex items-center gap-0.5"
-                    >
-                      <span>{tx.actionLabel || 'Action'}</span>
-                      <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  )}
-
                   {tx.txHash && tx.explorerUrl && (
                     <a
                       href={tx.explorerUrl}

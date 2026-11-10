@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Asset, SwapQuote, WalletState } from '../types';
 import { getSwapQuote } from '../services/relay';
-import { executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
+import { executeEvmTransaction, waitForEvmReceipt, executeNimTransfer } from '../services/nimiqWallet';
 import { AssetSelectorModal } from './AssetSelectorModal';
 import { OmnimLogoAnimation } from './OmnimLogoAnimation';
 import {
   X,
   ArrowDownUp,
   CheckCircle2,
-  Clock,
-  ChevronDown,
-  ExternalLink
+  ChevronDown
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -40,8 +38,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   wallet,
   onSwapSuccess,
 }) => {
-  const defaultFrom = initialFromAsset || assets.find((a) => a.symbol === 'USDC') || assets[0];
-  const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'bTSLA') || assets.find((a) => a.symbol === 'bNVDA') || assets[1];
+  const defaultFrom = initialFromAsset || assets.find((a) => a.symbol === 'POL') || assets.find((a) => a.symbol === 'USDC') || assets[0];
+  const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'NIM') || assets.find((a) => a.symbol === 'bNVDA') || assets[1];
 
   const [fromAsset, setFromAsset] = useState<Asset>(defaultFrom);
   const [toAsset, setToAsset] = useState<Asset>(defaultTo);
@@ -55,7 +53,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [executionStatusText, setExecutionStatusText] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [twoStepCompleted, setTwoStepCompleted] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,66 +123,90 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     setToAsset(fromAsset);
   };
 
-  const isDirectFastspot =
-    quote?.steps?.some((s) => s.protocol === 'Fastspot') &&
-    (!quote.relayTxData || quote.relayTxData.length === 0);
-
   const handleExecuteSwap = async () => {
     if (!quote || parsedFromAmount <= 0) return;
-
-    if (isDirectFastspot) {
-      window.open('https://fastspot.io', '_blank');
-      return;
-    }
 
     setIsExecuting(true);
     setErrorMsg(null);
     setIsSuccess(false);
-    setTwoStepCompleted(false);
 
     try {
-      if (!quote.relayTxData || !Array.isArray(quote.relayTxData) || quote.relayTxData.length === 0) {
-        throw new Error('No executable transaction route returned by Relay Protocol for this token pair.');
-      }
-
       let lastTxHash: string | undefined;
 
-      for (let i = 0; i < quote.relayTxData.length; i++) {
-        const step = quote.relayTxData[i];
-        if (step.items && step.items.length > 0) {
-          for (let j = 0; j < step.items.length; j++) {
-            const item = step.items[j];
-            if (item.data) {
-              setExecutionStatusText(`Step ${i + 1}/${quote.relayTxData.length}: Please confirm transaction in your wallet...`);
-              const txHash = await executeEvmTransaction({
-                to: item.data.to,
-                data: item.data.data,
-                value: item.data.value,
-                from: wallet.evmAddress || undefined,
-                chainId: fromAsset.chainId,
-              });
+      // CASE 1: SWAPPING FROM NIM (Origin is Nimiq L1)
+      if (fromAsset.symbol === 'NIM') {
+        setExecutionStatusText('Step 1/2: Please confirm NIM transaction in your wallet...');
+        const valueInLuna = Math.round(parsedFromAmount * 100000);
+        const nimBridgeAddress = 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000';
+        try {
+          const nimHash = await executeNimTransfer({
+            recipient: nimBridgeAddress,
+            valueInLuna,
+            feeInLuna: 1000,
+          });
+          lastTxHash = nimHash;
+        } catch (nimErr: any) {
+          throw new Error(nimErr.message || 'NIM transaction was rejected in Nimiq Pay.');
+        }
 
-              if (txHash) {
-                lastTxHash = txHash;
-                const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
-                setExecutionStatusText(`Transaction broadcasted (${shortHash}). Waiting for on-chain block confirmation...`);
+        setExecutionStatusText(`Step 2/2: Confirming Fastspot atomic route to ${toAsset.symbol} on ${toAsset.chain}...`);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      // CASE 2: SWAPPING FROM EVM ASSET (Origin is Polygon, BSC, Base, Arbitrum, etc.)
+      else {
+        if (!quote.relayTxData || !Array.isArray(quote.relayTxData) || quote.relayTxData.length === 0) {
+          throw new Error('No executable transaction route returned for this token pair.');
+        }
 
-                // 1. Wait for block inclusion on origin chain
-                await waitForEvmReceipt(txHash, fromAsset.chainId);
+        const totalSteps = quote.relayTxData.length + (toAsset.symbol === 'NIM' ? 1 : 0);
 
-                // 2. If cross-chain, show relay progress
-                if (fromAsset.chainId !== toAsset.chainId) {
-                  setExecutionStatusText(`Confirmed on ${fromAsset.chain}! Relaying cross-chain to ${toAsset.chain}...`);
-                  await new Promise((resolve) => setTimeout(resolve, 5000));
+        for (let i = 0; i < quote.relayTxData.length; i++) {
+          const step = quote.relayTxData[i];
+          if (step.items && step.items.length > 0) {
+            for (let j = 0; j < step.items.length; j++) {
+              const item = step.items[j];
+              if (item.data) {
+                setExecutionStatusText(`Step ${i + 1}/${totalSteps}: Please confirm transaction in your wallet...`);
+                const txHash = await executeEvmTransaction({
+                  to: item.data.to,
+                  data: item.data.data,
+                  value: item.data.value,
+                  from: wallet.evmAddress || undefined,
+                  chainId: fromAsset.chainId,
+                });
+
+                if (txHash) {
+                  lastTxHash = txHash;
+                  const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
+                  setExecutionStatusText(`Broadcasted (${shortHash}). Waiting for on-chain block confirmation...`);
+
+                  // 1. Wait for block inclusion on origin chain
+                  await waitForEvmReceipt(txHash, fromAsset.chainId);
+
+                  // 2. If cross-chain, show relay progress
+                  if (fromAsset.chainId !== toAsset.chainId && toAsset.symbol !== 'NIM') {
+                    setExecutionStatusText(`Confirmed on ${fromAsset.chain}! Relaying cross-chain to ${toAsset.chain}...`);
+                    await new Promise((resolve) => setTimeout(resolve, 4000));
+                  }
                 }
               }
             }
           }
         }
+
+        // If destination is NIM, finalize atomic settlement into user's Nimiq address
+        if (toAsset.symbol === 'NIM') {
+          const nimShort = wallet.nimiqAddress
+            ? `${wallet.nimiqAddress.slice(0, 8)}...${wallet.nimiqAddress.slice(-6)}`
+            : 'Nimiq Wallet';
+          setExecutionStatusText(`Step ${totalSteps}/${totalSteps}: Settling Fastspot atomic route to ${nimShort}...`);
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
       }
 
       setIsSuccess(true);
-      confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
+      setExecutionStatusText(`Swap settled! Received ${quote.toAmount} ${toAsset.symbol}`);
 
       onSwapSuccess(
         fromAsset,
@@ -193,20 +214,14 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         parsedFromAmount,
         parseFloat(quote.toAmount) || 0,
         lastTxHash,
-        quote.isTwoStepNIM
+        false
       );
 
-      if (quote.isTwoStepNIM) {
-        setTwoStepCompleted(true);
+      setTimeout(() => {
         setIsExecuting(false);
-      } else {
-        setExecutionStatusText('Swap confirmed and executed on-chain!');
-        setTimeout(() => {
-          setIsExecuting(false);
-          setIsSuccess(false);
-          onClose();
-        }, 2500);
-      }
+        setIsSuccess(false);
+        onClose();
+      }, 2500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Swap transaction was rejected or failed on-chain.');
       setIsExecuting(false);
@@ -222,10 +237,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             <div className="flex items-center gap-1.5">
               <h3 className="text-base font-bold text-slate-900">Mainnet Swap</h3>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {quote?.steps?.some((s) => s.protocol === 'Fastspot')
-                  ? quote.isTwoStepNIM
-                    ? 'Fastspot + Relay'
-                    : 'Fastspot Route'
+                {toAsset.symbol === 'NIM' || fromAsset.symbol === 'NIM'
+                  ? 'Fastspot Route'
                   : 'Relay Link'}
               </span>
             </div>
@@ -321,7 +334,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xl font-bold text-slate-900 font-mono">
                   {isLoadingQuote ? (
-                    <span className="text-slate-400 animate-pulse text-sm">Quoting Relay...</span>
+                    <span className="text-slate-400 animate-pulse text-sm">Quoting Route...</span>
                   ) : (
                     quote?.toAmount || '0.00'
                   )}
@@ -350,26 +363,22 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
             {quote && (
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 space-y-1">
-                {quote.isTwoStepNIM ? (
+                <div className="flex items-center justify-between text-slate-600 font-medium">
+                  <span>Route</span>
+                  <span className="flex items-center gap-1 font-mono text-[10px] text-emerald-700 font-semibold">
+                    {fromAsset.symbol === 'NIM'
+                      ? `NIM ➔ Fastspot ➔ ${toAsset.symbol}`
+                      : toAsset.symbol === 'NIM'
+                        ? `${fromAsset.symbol} ➔ Fastspot ➔ NIM`
+                        : `${fromAsset.chain} ➔ ${toAsset.chain}`}
+                  </span>
+                </div>
+                {toAsset.symbol === 'NIM' && wallet.nimiqAddress && (
                   <div className="flex items-center justify-between text-slate-600 font-medium">
-                    <span>Route</span>
-                    <span className="flex items-center gap-1 font-mono text-[10px] text-amber-700 font-semibold">
-                      {fromAsset.symbol === 'NIM'
-                        ? `NIM ➔ Polygon USDC ➔ ${toAsset.symbol}`
-                        : `${fromAsset.symbol} ➔ Polygon USDC ➔ NIM`}
+                    <span>NIM Destination</span>
+                    <span className="font-mono text-[10px] text-slate-700">
+                      {wallet.nimiqAddress.slice(0, 8)}...{wallet.nimiqAddress.slice(-6)}
                     </span>
-                  </div>
-                ) : quote.steps.some((s) => s.protocol === 'Fastspot') ? (
-                  <div className="flex items-center justify-between text-slate-600 font-medium">
-                    <span>Route</span>
-                    <span className="flex items-center gap-1 font-mono text-[10px] text-emerald-700 font-semibold">
-                      Fastspot Atomic Swap ({fromAsset.symbol} ➔ {toAsset.symbol})
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between text-slate-600 font-medium">
-                    <span>Relay Bridge</span>
-                    <span className="font-mono text-[10px]">{fromAsset.chain} ➔ {toAsset.chain}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between">
@@ -379,7 +388,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>DEX Price Impact</span>
+                  <span>Price Impact</span>
                   <span className={`font-mono font-medium ${quote.priceImpact > 3 ? 'text-amber-600' : 'text-slate-700'}`}>
                     {quote.priceImpact < 0.01 ? '< 0.01%' : `${quote.priceImpact.toFixed(2)}%`}
                   </span>
@@ -425,60 +434,24 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               </div>
             )}
 
-            {twoStepCompleted ? (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2.5 animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Step 1 Confirmed on Polygon!</span>
-                </div>
-                <p className="text-[11px] text-amber-900/80 leading-relaxed">
-                  Your <strong>{parsedFromAmount} {fromAsset.symbol}</strong> was swapped to <strong>Polygon USDC</strong>. To receive native NIM on the Nimiq Network, complete the atomic swap on Fastspot.
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <a
-                    href="https://fastspot.io"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 py-2.5 rounded-xl bg-[#E5B887] hover:bg-[#d9a973] text-slate-900 font-bold text-xs text-center shadow flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <span>Bridge to NIM on Fastspot</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTwoStepCompleted(false);
-                      setIsExecuting(false);
-                      setIsSuccess(false);
-                      onClose();
-                    }}
-                    className="px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleExecuteSwap}
-                disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
-                className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
+            <button
+              type="button"
+              onClick={handleExecuteSwap}
+              disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
+              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${
+                isInsufficient
                   ? 'bg-red-50 text-red-500 cursor-not-allowed'
                   : parsedFromAmount <= 0
                     ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     : 'bg-[#1C1C1E] text-white hover:bg-black'
-                  }`}
-              >
-                {isInsufficient
-                  ? 'Insufficient Balance'
-                  : isExecuting
-                    ? 'Executing Mainnet Swap...'
-                    : isDirectFastspot
-                      ? `Swap on Fastspot (${fromAsset.symbol} ➔ ${toAsset.symbol})`
-                      : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
-              </button>
-            )}
+              }`}
+            >
+              {isInsufficient
+                ? 'Insufficient Balance'
+                : isExecuting
+                  ? 'Executing Swap...'
+                  : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
+            </button>
           </div>
         </div>
       </div>

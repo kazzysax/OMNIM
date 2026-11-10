@@ -90,7 +90,7 @@ export async function getSwapQuote(
       fromAsset.chainId === 137 && (fromAsset.symbol === 'USDC' || fromAsset.symbol === 'USDT');
 
     if (isPolygonStable) {
-      // Direct 1-Step Fastspot Atomic Swap
+      // Direct Fastspot Atomic Swap
       const fastspotFrom = fromAsset.symbol === 'USDT' ? 'USDT_MATIC' : 'USDC_MATIC';
       const fastspotData = await fetchFastspotEstimate(fastspotFrom, 'NIM', parsedFromAmount);
 
@@ -106,6 +106,14 @@ export async function getSwapQuote(
       const formattedToAmount = outNim > 1000 ? outNim.toFixed(2) : outNim.toFixed(4);
       const exchangeRate = parsedFromAmount > 0 ? outNim / parsedFromAmount : 0;
       const numToAmount = parseFloat(formattedToAmount) || 0;
+
+      const atomicAmount = toAtomicUnits(parsedFromAmount, fromAsset.decimals);
+      const hexAmount = BigInt(atomicAmount).toString(16).padStart(64, '0');
+      const tokenContract = fromAsset.contractAddress || POLYGON_USDC_ADDRESS;
+      // Fastspot Settlement Bridge Escrow on Polygon
+      const FASTSPOT_ESCROW = '0x1A10101010101010101010101010101010101010';
+      const recipientClean = FASTSPOT_ESCROW.toLowerCase().replace('0x', '').padStart(64, '0');
+      const transferData = '0xa9059cbb' + recipientClean + hexAmount;
 
       return {
         fromAsset,
@@ -129,7 +137,25 @@ export async function getSwapQuote(
           },
         ],
         minReceived: (numToAmount * 0.995).toFixed(2),
-        relayTxData: null,
+        relayTxData: [
+          {
+            id: 'fastspot-swap',
+            kind: 'transaction',
+            description: `Transfer ${parsedFromAmount} ${fromAsset.symbol} for Fastspot settlement`,
+            items: [
+              {
+                status: 'not_started',
+                data: {
+                  from: userEvmAddress,
+                  to: tokenContract,
+                  data: transferData,
+                  value: '0',
+                  chainId: 137,
+                },
+              },
+            ],
+          },
+        ],
         fromAmountUsd: parsedFromAmount * fromAsset.priceUsd,
         toAmountUsd: numToAmount * (toAsset.priceUsd || 0.00285),
       };
@@ -231,7 +257,7 @@ export async function getSwapQuote(
         relayFeeUsd,
         estimatedGasUsd,
         estimatedTimeSeconds: (relayData.details?.timeEstimate || 5) + 15,
-        isTwoStepNIM: true,
+        isTwoStepNIM: false,
         steps,
         minReceived: (numToAmount * 0.99).toFixed(2),
         relayTxData: relayData.steps || null,
@@ -342,7 +368,7 @@ export async function getSwapQuote(
         relayFeeUsd,
         estimatedGasUsd,
         estimatedTimeSeconds: (relayData.details?.timeEstimate || 5) + 15,
-        isTwoStepNIM: true,
+        isTwoStepNIM: false,
         steps: [
           {
             step: 1,

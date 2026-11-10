@@ -232,12 +232,25 @@ export async function executeNimTransfer(params: {
   valueInLuna: number;
   feeInLuna?: number;
 }): Promise<string> {
-  if (window.nimiq && typeof window.nimiq.sendBasicTransaction === 'function') {
-    return await window.nimiq.sendBasicTransaction({
+  const provider = await getNimiqProvider();
+  if (provider && typeof provider.sendBasicTransaction === 'function') {
+    const res = await provider.sendBasicTransaction({
       recipient: params.recipient,
       value: params.valueInLuna,
       fee: params.feeInLuna || 1000,
     });
+    if (typeof res === 'string') return res;
+    if (res && (res as any).hash) return (res as any).hash;
+  }
+
+  if (window.nimiq && typeof window.nimiq.sendBasicTransaction === 'function') {
+    const res = await window.nimiq.sendBasicTransaction({
+      recipient: params.recipient,
+      value: params.valueInLuna,
+      fee: params.feeInLuna || 1000,
+    });
+    if (typeof res === 'string') return res;
+    if (res && (res as any).hash) return (res as any).hash;
   }
 
   throw new Error('Nimiq provider not found. Please open inside Nimiq Pay.');
