@@ -101,6 +101,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           const rawMsg = err.message || '';
           if (rawMsg.toLowerCase().includes('failed to fetch') || rawMsg.toLowerCase().includes('networkerror')) {
             setErrorMsg('Network quote service temporarily slow. Retrying in background...');
+          } else if (rawMsg.toLowerCase().includes('rate limit') || rawMsg.toLowerCase().includes('429')) {
+            setErrorMsg('Routing network currently busy. Please wait a moment or adjust the amount.');
           } else {
             setErrorMsg(rawMsg || 'Mainnet route quotation failed.');
           }
@@ -108,7 +110,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       } finally {
         if (active) setIsLoadingQuote(false);
       }
-    }, 450);
+    }, 700);
 
     return () => {
       active = false;

@@ -114,6 +114,9 @@ export async function fetchLiFiQuote(
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const rawMsg = err.message || '';
+    if (res.status === 429 || rawMsg.toLowerCase().includes('rate limit')) {
+      throw new Error('Li.Fi DEX aggregator currently busy (rate limit).');
+    }
     if (rawMsg.toLowerCase().includes('no available quotes') || rawMsg.toLowerCase().includes('no route found')) {
       throw new Error(`No direct route found for ${fromAsset.symbol} to ${toAsset.symbol}. Try swapping to USDT or POL first.`);
     }
@@ -453,37 +456,34 @@ export async function getSwapQuote(
   }
 
   // 3. EVM to EVM Intelligent Routing
-  // If either asset is on BNB Chain (56), prioritize Li.Fi (deep coverage for bAAPL, bTSLA, bNVDA, bMETA, bGOOGL, bSPY, bQQQ, bCOIN, bGOLD, bSLV, CAKE)
-  if (fromAsset.chainId === 56 || toAsset.chainId === 56) {
-    try {
-      return await fetchLiFiQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
-    } catch (lifiErr: any) {
-      console.warn('Li.Fi quote failed on BNB Chain, attempting Relay fallback:', lifiErr.message);
-      try {
-        return await fetchRelayQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
-      } catch (relayErr: any) {
-        const msg = lifiErr.message || relayErr.message || '';
-        if (msg.includes('temporary network error') || msg.includes('timed out')) {
-          throw new Error('Routing network temporarily busy. Please retry in a few seconds.');
-        }
-        throw new Error(lifiErr.message || relayErr.message || 'No swap route currently available.');
-      }
-    }
-  }
-
-  // For other EVM routes (e.g. Polygon, Base, Arbitrum), try Relay first, fallback to Li.Fi
+  // Prioritize Relay Protocol first (high throughput, no unauthenticated 1-hour public lockout)
   try {
     return await fetchRelayQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
   } catch (relayErr: any) {
-    console.warn('Relay route unavailable, attempting Li.Fi router fallback:', relayErr.message);
+    console.warn('Relay route unavailable, attempting secondary DEX aggregator fallback:', relayErr.message);
     try {
       return await fetchLiFiQuote(fromAsset, toAsset, parsedFromAmount, userEvmAddress);
     } catch (lifiErr: any) {
-      const msg = relayErr.message || lifiErr.message || '';
-      if (msg.includes('temporary network error') || msg.includes('timed out')) {
-        throw new Error('Routing network temporarily busy. Please retry in a few seconds.');
+      const relayMsg = relayErr.message || '';
+      const lifiMsg = lifiErr.message || '';
+
+      // If either router returned a rate limit error, sanitize to user-friendly text
+      if (lifiMsg.toLowerCase().includes('rate limit') || relayMsg.toLowerCase().includes('rate limit')) {
+        if (relayMsg && !relayMsg.toLowerCase().includes('rate limit')) {
+          throw new Error(relayMsg);
+        }
+        throw new Error('Routing service currently high traffic. Please retry in a few moments or adjust the amount.');
       }
-      throw new Error(relayErr.message || lifiErr.message || 'No swap route currently available.');
+
+      if (relayMsg.includes('DEX liquidity') || lifiMsg.includes('DEX liquidity')) {
+        throw new Error(relayMsg || lifiMsg);
+      }
+
+      if (relayMsg.includes('too small') || lifiMsg.includes('too small')) {
+        throw new Error(relayMsg || lifiMsg);
+      }
+
+      throw new Error(relayMsg || lifiMsg || 'No swap route currently available.');
     }
   }
 }
