@@ -35,8 +35,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const defaultFrom = initialFromAsset || assets.find((a) => a.symbol === 'USDC') || assets[0];
   const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'bTSLA') || assets.find((a) => a.symbol === 'bNVDA') || assets[1];
 
-  const polygonUsdc = assets.find((a) => a.id === 'usdc-polygon');
-
   const [fromAsset, setFromAsset] = useState<Asset>(defaultFrom);
   const [toAsset, setToAsset] = useState<Asset>(defaultTo);
   const [fromAmount, setFromAmount] = useState<string>('');
@@ -119,19 +117,25 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     setToAsset(fromAsset);
   };
 
+  const isDirectFastspot =
+    quote?.steps?.some((s) => s.protocol === 'Fastspot') &&
+    (!quote.relayTxData || quote.relayTxData.length === 0);
+
   const handleExecuteSwap = async () => {
     if (!quote || parsedFromAmount <= 0) return;
+
+    if (isDirectFastspot) {
+      window.open('https://fastspot.io', '_blank');
+      return;
+    }
+
     setIsExecuting(true);
     setErrorMsg(null);
     setIsSuccess(false);
 
     try {
-      if (quote.isTwoStepNIM) {
-        throw new Error('NIM cross-chain bridging requires Nimiq Pay built-in Fastspot service. Please bridge NIM to Polygon USDC first or swap EVM assets directly on Mainnet.');
-      }
-
       if (!quote.relayTxData || !Array.isArray(quote.relayTxData) || quote.relayTxData.length === 0) {
-        throw new Error('No executable transaction route returned by Relay Protocol Mainnet for this token pair.');
+        throw new Error('No executable transaction route returned by Relay Protocol for this token pair.');
       }
 
       for (let i = 0; i < quote.relayTxData.length; i++) {
@@ -168,7 +172,11 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       }
 
       setIsSuccess(true);
-      setExecutionStatusText('Swap confirmed and executed on-chain!');
+      if (quote.isTwoStepNIM) {
+        setExecutionStatusText('Step 1 Complete! Polygon USDC received. You can now finalize your NIM swap on Fastspot.');
+      } else {
+        setExecutionStatusText('Swap confirmed and executed on-chain!');
+      }
       confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
 
       onSwapSuccess(fromAsset, toAsset, parsedFromAmount, parseFloat(quote.toAmount) || 0);
@@ -177,7 +185,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         setIsExecuting(false);
         setIsSuccess(false);
         onClose();
-      }, 2500);
+      }, quote.isTwoStepNIM ? 3500 : 2500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Swap transaction was rejected or failed on-chain.');
       setIsExecuting(false);
@@ -193,7 +201,11 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             <div className="flex items-center gap-1.5">
               <h3 className="text-base font-bold text-slate-900">Mainnet Swap</h3>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                Relay Link
+                {quote?.steps?.some((s) => s.protocol === 'Fastspot')
+                  ? quote.isTwoStepNIM
+                    ? 'Fastspot + Relay'
+                    : 'Fastspot Route'
+                  : 'Relay Link'}
               </span>
             </div>
             <button
@@ -206,25 +218,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           </div>
 
           <div className="mt-3 space-y-2">
-            {polygonUsdc && polygonUsdc.userBalance > 0 && fromAsset.id !== 'usdc-polygon' && (
-              <div className="p-2.5 rounded-xl bg-slate-100/90 border border-slate-200/80 flex items-center justify-between text-xs text-slate-700">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900">Polygon USDC:</span>
-                  <span className="font-mono text-emerald-600 font-bold">{polygonUsdc.userBalance.toFixed(4)}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFromAsset(polygonUsdc);
-                    setFromAmount(polygonUsdc.userBalance.toString());
-                  }}
-                  className="px-2 py-0.5 rounded-md bg-white border border-slate-300 text-slate-900 font-bold text-[11px] shadow-sm hover:bg-slate-50 transition-colors"
-                >
-                  Pay with USDC
-                </button>
-              </div>
-            )}
-
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
               <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
                 <span>You Pay</span>
@@ -339,8 +332,17 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 {quote.isTwoStepNIM ? (
                   <div className="flex items-center justify-between text-slate-600 font-medium">
                     <span>Route</span>
-                    <span className="flex items-center gap-1 font-mono text-[10px]">
-                      NIM ➔ Polygon USDC ➔ {toAsset.symbol}
+                    <span className="flex items-center gap-1 font-mono text-[10px] text-amber-700 font-semibold">
+                      {fromAsset.symbol === 'NIM'
+                        ? `NIM ➔ Polygon USDC ➔ ${toAsset.symbol}`
+                        : `${fromAsset.symbol} ➔ Polygon USDC ➔ NIM`}
+                    </span>
+                  </div>
+                ) : quote.steps.some((s) => s.protocol === 'Fastspot') ? (
+                  <div className="flex items-center justify-between text-slate-600 font-medium">
+                    <span>Route</span>
+                    <span className="flex items-center gap-1 font-mono text-[10px] text-emerald-700 font-semibold">
+                      Fastspot Atomic Swap ({fromAsset.symbol} ➔ {toAsset.symbol})
                     </span>
                   </div>
                 ) : (
@@ -413,7 +415,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   : 'bg-[#1C1C1E] text-white hover:bg-black'
                 }`}
             >
-              {isInsufficient ? 'Insufficient Balance' : isExecuting ? 'Executing Mainnet Swap...' : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
+              {isInsufficient
+                ? 'Insufficient Balance'
+                : isExecuting
+                  ? 'Executing Mainnet Swap...'
+                  : isDirectFastspot
+                    ? `Swap on Fastspot (${fromAsset.symbol} ➔ ${toAsset.symbol})`
+                    : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
             </button>
           </div>
         </div>

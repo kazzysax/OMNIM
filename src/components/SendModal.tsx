@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Asset, WalletState } from '../types';
-import { executeNimTransfer, executeEvmTransaction } from '../services/nimiqWallet';
-import { X, CheckCircle2, ChevronDown, Clock } from 'lucide-react';
+import { executeNimTransfer, executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
+import { toAtomicUnits } from '../services/relay';
+import { X, CheckCircle2, ChevronDown, Clock, AlertCircle } from 'lucide-react';
 import { AssetSelectorModal } from './AssetSelectorModal';
 
 interface SendModalProps {
@@ -25,6 +26,7 @@ export const SendModal: React.FC<SendModalProps> = ({
   const [isSelectingAsset, setIsSelectingAsset] = useState<boolean>(false);
   const [isSending, setIsSending] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
 
   if (!isOpen) return null;
@@ -32,24 +34,91 @@ export const SendModal: React.FC<SendModalProps> = ({
   const parsedAmount = parseFloat(amount) || 0;
   const isInsufficient = parsedAmount > selectedAsset.userBalance;
 
+  // Gas buffer for native gas tokens (POL, BNB, ETH)
+  const isNative =
+    !selectedAsset.contractAddress ||
+    selectedAsset.contractAddress === '0x0000000000000000000000000000000000000000' ||
+    selectedAsset.contractAddress === '0x0000000000000000000000000000000000001010';
+
+  const gasBuffer = isNative
+    ? selectedAsset.chainId === 137
+      ? 0.05 // Polygon: reserve 0.05 POL
+      : selectedAsset.chainId === 56
+        ? 0.002 // BSC: reserve 0.002 BNB
+        : 0.001 // Base/Arb
+    : 0;
+
+  const maxSpendable = isNative
+    ? Math.max(0, parseFloat((selectedAsset.userBalance - gasBuffer).toFixed(4)))
+    : selectedAsset.userBalance;
+
+  const handleMaxClick = () => {
+    setAmount(maxSpendable > 0 ? maxSpendable.toString() : '0');
+  };
+
   const handleSend = async () => {
-    if (!recipient || parsedAmount <= 0) return;
+    const trimmedRecipient = recipient.trim();
+    if (!trimmedRecipient || parsedAmount <= 0) return;
+
     setIsSending(true);
+    setIsError(false);
     setStatusMessage('Preparing transaction...');
 
     try {
       if (selectedAsset.symbol === 'NIM') {
+        if (!trimmedRecipient.toLowerCase().startsWith('nq')) {
+          throw new Error('Please enter a valid Nimiq address starting with NQ.');
+        }
+
         setStatusMessage('Signing in Nimiq Pay...');
         await executeNimTransfer({
-          recipient,
-          valueInLuna: Math.floor(parsedAmount * 100000),
+          recipient: trimmedRecipient,
+          valueInLuna: Math.round(parsedAmount * 100000),
         });
       } else {
-        setStatusMessage(`Submitting on ${selectedAsset.chain}...`);
-        await executeEvmTransaction({
-          to: recipient,
-          from: wallet.evmAddress || undefined,
-        });
+        // EVM Address Validation
+        if (!/^0x[a-fA-F0-9]{40}$/.test(trimmedRecipient)) {
+          throw new Error('Please enter a valid 0x EVM address (42 characters).');
+        }
+
+        setStatusMessage(`Switching wallet to ${selectedAsset.chain}...`);
+
+        let txHash = '';
+        if (isNative) {
+          // Native token transfer (e.g. POL on Polygon, BNB on BSC, ETH on Base)
+          const rawAtomic = toAtomicUnits(parsedAmount, selectedAsset.decimals);
+          const valueHex = '0x' + BigInt(rawAtomic).toString(16);
+
+          setStatusMessage(`Please confirm sending ${parsedAmount} ${selectedAsset.symbol} on ${selectedAsset.chain}...`);
+          txHash = await executeEvmTransaction({
+            to: trimmedRecipient,
+            value: valueHex,
+            data: '0x',
+            chainId: selectedAsset.chainId,
+            from: wallet.evmAddress || undefined,
+          });
+        } else {
+          // ERC-20 token transfer: transfer(address to, uint256 value) -> selector 0xa9059cbb
+          const rawAtomic = toAtomicUnits(parsedAmount, selectedAsset.decimals);
+          const cleanRecipient = trimmedRecipient.toLowerCase().replace('0x', '').padStart(64, '0');
+          const amountHex = BigInt(rawAtomic).toString(16).padStart(64, '0');
+          const calldata = '0xa9059cbb' + cleanRecipient + amountHex;
+
+          setStatusMessage(`Please confirm sending ${parsedAmount} ${selectedAsset.symbol} on ${selectedAsset.chain}...`);
+          txHash = await executeEvmTransaction({
+            to: selectedAsset.contractAddress,
+            value: '0x0',
+            data: calldata,
+            chainId: selectedAsset.chainId,
+            from: wallet.evmAddress || undefined,
+          });
+        }
+
+        if (txHash) {
+          const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
+          setStatusMessage(`Transaction submitted (${shortHash}). Confirming on ${selectedAsset.chain}...`);
+          await waitForEvmReceipt(txHash, selectedAsset.chainId);
+        }
       }
 
       setIsSuccess(true);
@@ -60,9 +129,10 @@ export const SendModal: React.FC<SendModalProps> = ({
         setIsSending(false);
         setIsSuccess(false);
         onClose();
-      }, 1800);
+      }, 2000);
     } catch (err: any) {
-      setStatusMessage(err.message || 'Transaction failed.');
+      setIsError(true);
+      setStatusMessage(err.message || 'Transaction failed or was rejected in your wallet.');
       setIsSending(false);
     }
   };
@@ -123,7 +193,7 @@ export const SendModal: React.FC<SendModalProps> = ({
                 <span>Amount</span>
                 <button
                   type="button"
-                  onClick={() => setAmount(selectedAsset.userBalance.toString())}
+                  onClick={handleMaxClick}
                   className="text-slate-900 font-bold hover:underline"
                 >
                   Max
@@ -139,10 +209,19 @@ export const SendModal: React.FC<SendModalProps> = ({
             </div>
 
             {statusMessage && (
-              <div className="p-2.5 rounded-xl bg-slate-100 text-xs text-slate-700 flex items-center gap-2">
-                {isSending && <Clock className="w-3.5 h-3.5 animate-spin text-slate-900" />}
-                {isSuccess && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-                <span>{statusMessage}</span>
+              <div
+                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                  isError
+                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                    : isSuccess
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-slate-100 text-slate-700'
+                }`}
+              >
+                {isSending && <Clock className="w-3.5 h-3.5 animate-spin text-slate-900 shrink-0" />}
+                {isSuccess && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                {isError && <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
+                <span className="break-all">{statusMessage}</span>
               </div>
             )}
 
