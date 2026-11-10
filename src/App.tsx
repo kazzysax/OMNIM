@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Asset, WalletState, TransactionRecord } from './types';
 import { INITIAL_ASSETS } from './config/assets';
-import { connectDualWallet, fetchRealEvmBalance } from './services/nimiqWallet';
+import { connectDualWallet, fetchRealEvmBalance, initiateEvmConnection } from './services/nimiqWallet';
 import { discoverNewTokens } from './services/tokenDiscovery';
 import { HeroBalanceCard } from './components/HeroBalanceCard';
 import { PortfolioSection } from './components/PortfolioSection';
@@ -495,6 +495,15 @@ export default function App() {
     setIsSwapOpen(true);
   };
 
+  const handleConnectEvm = async () => {
+    try {
+      await initiateEvmConnection();
+      await refreshWalletAndBalances();
+    } catch (e) {
+      console.warn('Manual EVM connect error:', e);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-[#F2F2F7] flex justify-center selection:bg-slate-300">
       <AppSplashIntro />
@@ -530,6 +539,7 @@ export default function App() {
                 onOpenWalletDetails={() => setIsWalletDetailsOpen(true)}
                 onRefresh={refreshWalletAndBalances}
                 isRefreshing={isRefreshing}
+                onConnectEvm={handleConnectEvm}
               />
 
               <PortfolioSection
@@ -569,6 +579,7 @@ export default function App() {
         isOpen={isReceiveOpen}
         onClose={() => setIsReceiveOpen(false)}
         wallet={wallet}
+        onConnectEvm={handleConnectEvm}
       />
 
       <SendModal
@@ -592,6 +603,7 @@ export default function App() {
           if (activeNavTab === 'profile') setActiveNavTab('dashboard');
         }}
         wallet={wallet}
+        onConnectEvm={handleConnectEvm}
       />
     </div>
   );

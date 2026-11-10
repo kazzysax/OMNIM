@@ -82,6 +82,9 @@ export async function connectDualWallet(): Promise<WalletState> {
       const accounts = await window.ethereum.request({ method: 'eth_accounts' });
       if (accounts && accounts.length > 0) {
         evmAddress = accounts[0];
+      } else {
+        const requested = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        if (requested && requested.length > 0) evmAddress = requested[0];
       }
 
       const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
@@ -105,6 +108,20 @@ export async function connectDualWallet(): Promise<WalletState> {
     isConsensusEstablished,
     lastBlockHeight,
   };
+}
+
+export async function initiateEvmConnection(): Promise<string | null> {
+  if (typeof window !== 'undefined' && window.ethereum) {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      if (accounts && accounts.length > 0) {
+        return accounts[0];
+      }
+    } catch (err) {
+      console.warn('Manual eth_requestAccounts error:', err);
+    }
+  }
+  return null;
 }
 
 export const CHAIN_RPC_MAP: Record<number, string[]> = {

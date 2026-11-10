@@ -4,6 +4,8 @@ const https = require('https');
 const cache = new Map();
 cache.set('api.vercel.com', '76.76.21.9');
 cache.set('vercel.com', '76.76.21.21');
+cache.set('omnim-io.vercel.app', '76.76.21.21');
+cache.set('omnim-zeta.vercel.app', '76.76.21.21');
 
 function resolveDoH(hostname) {
   return new Promise((resolve, reject) => {

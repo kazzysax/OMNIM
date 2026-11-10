@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { WalletState } from '../types';
-import { X, Copy, Check } from 'lucide-react';
+import { X, Copy, Check, Wallet } from 'lucide-react';
 
 interface WalletDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   wallet: WalletState;
+  onConnectEvm?: () => void;
 }
 
 export const WalletDetailsModal: React.FC<WalletDetailsModalProps> = ({
   isOpen,
   onClose,
   wallet,
+  onConnectEvm,
 }) => {
   const [copiedType, setCopiedType] = useState<string | null>(null);
 
@@ -72,19 +74,29 @@ export const WalletDetailsModal: React.FC<WalletDetailsModalProps> = ({
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="text-slate-700 font-bold">EVM Address</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 font-bold">
-              EVM
+              Polygon / Multi-Chain
             </span>
           </div>
           <div className="font-mono text-xs text-slate-800 break-all select-all font-medium py-1">
             {wallet.evmAddress || 'Not connected'}
           </div>
-          <button
-            onClick={() => wallet.evmAddress && handleCopy('evm', wallet.evmAddress)}
-            className="mt-2 text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-white border border-slate-200 shadow-sm active:scale-95 transition-all"
-          >
-            {copiedType === 'evm' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-            <span>{copiedType === 'evm' ? 'Copied' : 'Copy Address'}</span>
-          </button>
+          {wallet.evmAddress ? (
+            <button
+              onClick={() => handleCopy('evm', wallet.evmAddress!)}
+              className="mt-2 text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-white border border-slate-200 shadow-sm active:scale-95 transition-all"
+            >
+              {copiedType === 'evm' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+              <span>{copiedType === 'evm' ? 'Copied' : 'Copy Address'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={onConnectEvm}
+              className="mt-2 text-xs font-bold text-white flex items-center gap-1.5 py-2 px-3 rounded-xl bg-[#1C1C1E] hover:bg-black shadow-md active:scale-95 transition-all"
+            >
+              <Wallet className="w-3.5 h-3.5 text-amber-400" />
+              <span>Connect EVM Wallet</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
