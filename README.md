@@ -23,6 +23,21 @@ Nimiq Pay provides one of the cleanest crypto payment experiences in Web3—inst
 **OMNIM transforms Nimiq Pay into a comprehensive global wealth management suite.**  
 It bridges Nimiq’s browser-native L1 ecosystem with verified BEP-20 tokenized equities on BNB Chain, physical commodities, and regulated electronic fiat money—allowing users to invest, hold, and swap 39+ global assets directly from their existing Nimiq Pay app with zero manual seed phrase management.
 
+Built for the **Nimiq Mini-Apps Challenge** • Track: **"Extend What Users Can Hold"**.
+
+---
+
+### What is in the App
+
+| Module / View | What it does |
+| :--- | :--- |
+| **Portfolio & Assets** | Real-time multi-chain balances for 39 assets, 24h P&L indicators, interactive sparklines, and category tabs (`All`, `Stocks & Commodities`, `Currencies`, `Crypto`). |
+| **Dual-Wallet Consensus** | Automatic zero-config handshake with `window.nimiq` (`@nimiq/mini-app-sdk`) and `window.ethereum` (`EIP-1193`). Displays live PoS consensus sync status and unified EVM address. |
+| **Cross-Chain Swap Terminal** | Real-time quote routing via Relay Protocol and Li.Fi. Pre-flights gas, calculates price impact, and executes tokenized stock buys with biometric/PIN confirmation. |
+| **FastSpot NIM Bridge** | 2-step atomic swap pipeline converting native NIM to Polygon USDC, opening liquidity into any tokenized stock, commodity, or fiat currency. |
+| **Send & Receive (QR Modal)** | Dual QR-code generator for both native Nimiq (`NQ...`) and EVM (`0x...`) addresses with one-tap copy. |
+| **Activity & On-Chain Receipts** | Full transaction ledger with filter tabs (`All`, `Swaps`, `Transfers`), live status badges, and deep-links to public block explorers. |
+
 ---
 
 ### The Mechanisms
