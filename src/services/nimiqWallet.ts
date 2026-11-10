@@ -113,23 +113,23 @@ export async function fetchRealEvmBalance(
   const cleanAddr = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
   const payload = isNative
     ? {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'eth_getBalance',
-        params: [userAddress, 'latest'],
-      }
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_getBalance',
+      params: [userAddress, 'latest'],
+    }
     : {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'eth_call',
-        params: [
-          {
-            to: tokenAddress,
-            data: '0x70a08231' + cleanAddr,
-          },
-          'latest',
-        ],
-      };
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_call',
+      params: [
+        {
+          to: tokenAddress,
+          data: '0x70a08231' + cleanAddr,
+        },
+        'latest',
+      ],
+    };
 
   const rpcs = CHAIN_RPC_MAP[chainId] || [];
 
@@ -367,7 +367,7 @@ export async function waitForEvmReceipt(
           const status = receipt.status;
           return status === '0x1' || status === 1 || status === true;
         }
-      } catch {}
+      } catch { }
     }
 
     // 2. Try fast public RPCs
@@ -391,7 +391,7 @@ export async function waitForEvmReceipt(
             return status === '0x1' || status === 1 || status === true;
           }
         }
-      } catch {}
+      } catch { }
     }
 
     // Wait 2 seconds before checking again

@@ -9,7 +9,8 @@ import {
   ArrowDownUp,
   CheckCircle2,
   Clock,
-  ChevronDown
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -20,7 +21,14 @@ interface SwapModalProps {
   initialFromAsset?: Asset;
   initialToAsset?: Asset;
   wallet: WalletState;
-  onSwapSuccess: (fromAsset: Asset, toAsset: Asset, fromAmount: number, toAmount: number) => void;
+  onSwapSuccess: (
+    fromAsset: Asset,
+    toAsset: Asset,
+    fromAmount: number,
+    toAmount: number,
+    txHash?: string,
+    isTwoStepNIM?: boolean
+  ) => void;
 }
 
 export const SwapModal: React.FC<SwapModalProps> = ({
@@ -47,6 +55,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [executionStatusText, setExecutionStatusText] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [twoStepCompleted, setTwoStepCompleted] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -132,11 +141,14 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     setIsExecuting(true);
     setErrorMsg(null);
     setIsSuccess(false);
+    setTwoStepCompleted(false);
 
     try {
       if (!quote.relayTxData || !Array.isArray(quote.relayTxData) || quote.relayTxData.length === 0) {
         throw new Error('No executable transaction route returned by Relay Protocol for this token pair.');
       }
+
+      let lastTxHash: string | undefined;
 
       for (let i = 0; i < quote.relayTxData.length; i++) {
         const step = quote.relayTxData[i];
@@ -154,6 +166,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               });
 
               if (txHash) {
+                lastTxHash = txHash;
                 const shortHash = `${txHash.slice(0, 6)}...${txHash.slice(-4)}`;
                 setExecutionStatusText(`Transaction broadcasted (${shortHash}). Waiting for on-chain block confirmation...`);
 
@@ -172,20 +185,28 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       }
 
       setIsSuccess(true);
-      if (quote.isTwoStepNIM) {
-        setExecutionStatusText('Step 1 Complete! Polygon USDC received. You can now finalize your NIM swap on Fastspot.');
-      } else {
-        setExecutionStatusText('Swap confirmed and executed on-chain!');
-      }
       confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
 
-      onSwapSuccess(fromAsset, toAsset, parsedFromAmount, parseFloat(quote.toAmount) || 0);
+      onSwapSuccess(
+        fromAsset,
+        toAsset,
+        parsedFromAmount,
+        parseFloat(quote.toAmount) || 0,
+        lastTxHash,
+        quote.isTwoStepNIM
+      );
 
-      setTimeout(() => {
+      if (quote.isTwoStepNIM) {
+        setTwoStepCompleted(true);
         setIsExecuting(false);
-        setIsSuccess(false);
-        onClose();
-      }, quote.isTwoStepNIM ? 3500 : 2500);
+      } else {
+        setExecutionStatusText('Swap confirmed and executed on-chain!');
+        setTimeout(() => {
+          setIsExecuting(false);
+          setIsSuccess(false);
+          onClose();
+        }, 2500);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Swap transaction was rejected or failed on-chain.');
       setIsExecuting(false);
@@ -404,25 +425,60 @@ export const SwapModal: React.FC<SwapModalProps> = ({
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleExecuteSwap}
-              disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
-              className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
-                ? 'bg-red-50 text-red-500 cursor-not-allowed'
-                : parsedFromAmount <= 0
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  : 'bg-[#1C1C1E] text-white hover:bg-black'
-                }`}
-            >
-              {isInsufficient
-                ? 'Insufficient Balance'
-                : isExecuting
-                  ? 'Executing Mainnet Swap...'
-                  : isDirectFastspot
-                    ? `Swap on Fastspot (${fromAsset.symbol} ➔ ${toAsset.symbol})`
-                    : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
-            </button>
+            {twoStepCompleted ? (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2.5 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Step 1 Confirmed on Polygon!</span>
+                </div>
+                <p className="text-[11px] text-amber-900/80 leading-relaxed">
+                  Your <strong>{parsedFromAmount} {fromAsset.symbol}</strong> was swapped to <strong>Polygon USDC</strong>. To receive native NIM on the Nimiq Network, complete the atomic swap on Fastspot.
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <a
+                    href="https://fastspot.io"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-2.5 rounded-xl bg-[#E5B887] hover:bg-[#d9a973] text-slate-900 font-bold text-xs text-center shadow flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <span>Bridge to NIM on Fastspot</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTwoStepCompleted(false);
+                      setIsExecuting(false);
+                      setIsSuccess(false);
+                      onClose();
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleExecuteSwap}
+                disabled={isExecuting || isInsufficient || parsedFromAmount <= 0}
+                className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
+                  ? 'bg-red-50 text-red-500 cursor-not-allowed'
+                  : parsedFromAmount <= 0
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-[#1C1C1E] text-white hover:bg-black'
+                  }`}
+              >
+                {isInsufficient
+                  ? 'Insufficient Balance'
+                  : isExecuting
+                    ? 'Executing Mainnet Swap...'
+                    : isDirectFastspot
+                      ? `Swap on Fastspot (${fromAsset.symbol} ➔ ${toAsset.symbol})`
+                      : `Swap ${fromAsset.symbol} to ${toAsset.symbol}`}
+              </button>
+            )}
           </div>
         </div>
       </div>

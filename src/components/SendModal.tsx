@@ -10,7 +10,7 @@ interface SendModalProps {
   onClose: () => void;
   assets: Asset[];
   wallet: WalletState;
-  onSendSuccess: (asset: Asset, amount: number) => void;
+  onSendSuccess: (asset: Asset, amount: number, txHash?: string, recipient?: string) => void;
 }
 
 export const SendModal: React.FC<SendModalProps> = ({
@@ -123,7 +123,7 @@ export const SendModal: React.FC<SendModalProps> = ({
 
       setIsSuccess(true);
       setStatusMessage(`Sent ${parsedAmount} ${selectedAsset.symbol}!`);
-      onSendSuccess(selectedAsset, parsedAmount);
+      onSendSuccess(selectedAsset, parsedAmount, txHash, trimmedRecipient);
 
       setTimeout(() => {
         setIsSending(false);
@@ -210,13 +210,12 @@ export const SendModal: React.FC<SendModalProps> = ({
 
             {statusMessage && (
               <div
-                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
-                  isError
+                className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${isError
                     ? 'bg-rose-50 text-rose-700 border border-rose-200'
                     : isSuccess
                       ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       : 'bg-slate-100 text-slate-700'
-                }`}
+                  }`}
               >
                 {isSending && <Clock className="w-3.5 h-3.5 animate-spin text-slate-900 shrink-0" />}
                 {isSuccess && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
@@ -230,10 +229,10 @@ export const SendModal: React.FC<SendModalProps> = ({
               onClick={handleSend}
               disabled={isSending || isInsufficient || !recipient || parsedAmount <= 0}
               className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-wide shadow-md transition-all active:scale-[0.98] ${isInsufficient
-                  ? 'bg-red-50 text-red-500 cursor-not-allowed'
-                  : !recipient || parsedAmount <= 0
-                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'bg-[#1C1C1E] text-white hover:bg-black'
+                ? 'bg-red-50 text-red-500 cursor-not-allowed'
+                : !recipient || parsedAmount <= 0
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-[#1C1C1E] text-white hover:bg-black'
                 }`}
             >
               {isInsufficient ? 'Insufficient Balance' : isSending ? 'Sending...' : `Send ${selectedAsset.symbol}`}

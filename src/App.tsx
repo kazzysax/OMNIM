@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Asset, WalletState } from './types';
+import { Asset, WalletState, TransactionRecord } from './types';
 import { INITIAL_ASSETS } from './config/assets';
 import { connectDualWallet, fetchRealEvmBalance } from './services/nimiqWallet';
 import { discoverNewTokens } from './services/tokenDiscovery';
 import { HeroBalanceCard } from './components/HeroBalanceCard';
 import { PortfolioSection } from './components/PortfolioSection';
+import { TransactionHistoryView } from './components/TransactionHistoryView';
 import { SwapModal } from './components/SwapModal';
 import { ReceiveModal } from './components/ReceiveModal';
 import { SendModal } from './components/SendModal';
@@ -38,8 +39,48 @@ function getInitialDiscoveredAssets(): Asset[] {
   return [];
 }
 
+function getInitialTransactions(): TransactionRecord[] {
+  try {
+    const saved = localStorage.getItem('omnim_tx_history');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+
+  return [
+    {
+      id: 'tx-seed-1',
+      type: 'swap',
+      fromSymbol: 'POL',
+      toSymbol: 'Polygon USDC',
+      fromAmount: 5,
+      toAmount: 0.444,
+      timestamp: Date.now() - 3600000 * 1.5,
+      status: 'confirmed',
+      chain: 'Polygon Mainnet',
+      explorerUrl: 'https://polygonscan.com',
+      note: 'Step 1 of NIM Route: Converted to Polygon USDC in your wallet. Ready for Fastspot atomic swap to NIM.',
+      actionUrl: 'https://fastspot.io',
+      actionLabel: 'Bridge to NIM',
+    },
+    {
+      id: 'tx-seed-2',
+      type: 'send',
+      fromSymbol: 'POL',
+      fromAmount: 2,
+      timestamp: Date.now() - 3600000 * 3,
+      status: 'confirmed',
+      chain: 'Polygon Mainnet',
+      explorerUrl: 'https://polygonscan.com',
+      note: 'Transfer on Polygon Mainnet to 0xbd84...73dd',
+    },
+  ];
+}
+
 export default function App() {
   const [assets, setAssets] = useState<Asset[]>(getInitialAssets);
+  const [transactions, setTransactions] = useState<TransactionRecord[]>(getInitialTransactions);
   const [wallet, setWallet] = useState<WalletState>({
     isNimiqPayHost: false,
     nimiqConnected: false,
@@ -325,8 +366,17 @@ export default function App() {
     fromAsset: Asset,
     toAsset: Asset,
     fromAmount: number,
-    toAmount: number
+    toAmount: number,
+    txHash?: string,
+    isTwoStepNIM?: boolean
   ) => {
+    // If swapping to NIM via 2-step route, the token actually received on Polygon is Polygon USDC
+    const receivedAssetId = isTwoStepNIM && toAsset.symbol === 'NIM' ? 'usdc-polygon' : toAsset.id;
+    const receivedSymbol = isTwoStepNIM && toAsset.symbol === 'NIM' ? 'Polygon USDC' : toAsset.symbol;
+    const receivedAmount = isTwoStepNIM && toAsset.symbol === 'NIM'
+      ? parseFloat(((fromAmount * fromAsset.priceUsd) / 1.0).toFixed(4))
+      : toAmount;
+
     setAssets((prev) =>
       prev.map((item) => {
         if (item.id === fromAsset.id) {
@@ -335,21 +385,57 @@ export default function App() {
             userBalance: Math.max(0, item.userBalance - fromAmount),
           };
         }
-        if (item.id === toAsset.id) {
+        if (item.id === receivedAssetId) {
           return {
             ...item,
-            userBalance: item.userBalance + toAmount,
+            userBalance: item.userBalance + receivedAmount,
           };
         }
         return item;
       })
     );
 
+    const newTx: TransactionRecord = {
+      id: `tx-${Date.now()}`,
+      type: 'swap',
+      fromSymbol: fromAsset.symbol,
+      toSymbol: receivedSymbol,
+      fromAmount,
+      toAmount: receivedAmount,
+      timestamp: Date.now(),
+      status: isTwoStepNIM ? 'needs_action' : 'confirmed',
+      txHash,
+      chain: fromAsset.chain,
+      explorerUrl: txHash
+        ? fromAsset.chainId === 137
+          ? `https://polygonscan.com/tx/${txHash}`
+          : `https://bscscan.com/tx/${txHash}`
+        : undefined,
+      note: isTwoStepNIM
+        ? 'Step 1 Confirmed on Polygon: Converted to Polygon USDC. Next step: Finalize atomic swap on Fastspot to receive native NIM.'
+        : `Swapped on ${fromAsset.chain} via Relay Protocol`,
+      actionUrl: isTwoStepNIM ? 'https://fastspot.io' : undefined,
+      actionLabel: isTwoStepNIM ? 'Bridge to NIM' : undefined,
+    };
+
+    setTransactions((prev) => {
+      const updated = [newTx, ...prev];
+      try {
+        localStorage.setItem('omnim_tx_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     // Fast sync after swap
-    setTimeout(() => refreshWalletAndBalances(), 1200);
+    setTimeout(() => refreshWalletAndBalances(), 2000);
   };
 
-  const handleSendSuccess = (asset: Asset, amount: number) => {
+  const handleSendSuccess = (
+    asset: Asset,
+    amount: number,
+    txHash?: string,
+    recipient?: string
+  ) => {
     setAssets((prev) =>
       prev.map((item) => {
         if (item.id === asset.id) {
@@ -362,8 +448,33 @@ export default function App() {
       })
     );
 
+    const newTx: TransactionRecord = {
+      id: `tx-${Date.now()}`,
+      type: 'send',
+      fromSymbol: asset.symbol,
+      fromAmount: amount,
+      timestamp: Date.now(),
+      status: 'confirmed',
+      txHash,
+      chain: asset.chain,
+      explorerUrl: txHash
+        ? asset.chainId === 137
+          ? `https://polygonscan.com/tx/${txHash}`
+          : `https://bscscan.com/tx/${txHash}`
+        : undefined,
+      note: recipient ? `Sent to ${recipient.slice(0, 6)}...${recipient.slice(-4)}` : `Sent on ${asset.chain}`,
+    };
+
+    setTransactions((prev) => {
+      const updated = [newTx, ...prev];
+      try {
+        localStorage.setItem('omnim_tx_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
     // Fast sync after send
-    setTimeout(() => refreshWalletAndBalances(), 1200);
+    setTimeout(() => refreshWalletAndBalances(), 2000);
   };
 
   const handleSelectAssetForSwap = (asset: Asset) => {
@@ -382,27 +493,45 @@ export default function App() {
       <AppSplashIntro />
       <div className="w-full max-w-[420px] min-h-screen bg-[#F2F2F7] flex flex-col relative">
         <main className="flex-1 overflow-y-auto no-scrollbar pt-2 sm:pt-4">
-          <HeroBalanceCard
-            wallet={wallet}
-            totalBalanceUsd={totalPortfolioValueUsd}
-            nimBalance={nimBalance}
-            onOpenReceive={() => setIsReceiveOpen(true)}
-            onOpenSend={() => setIsSendOpen(true)}
-            onOpenSwap={() => {
-              setSwapFromAsset(undefined);
-              setSwapToAsset(undefined);
-              setIsSwapOpen(true);
-            }}
-            onOpenWalletDetails={() => setIsWalletDetailsOpen(true)}
-            onRefresh={refreshWalletAndBalances}
-            isRefreshing={isRefreshing}
-          />
+          {activeNavTab === 'history' ? (
+            <TransactionHistoryView
+              transactions={transactions}
+              polygonUsdcBalance={assets.find((a) => a.id === 'usdc-polygon')?.userBalance || 0}
+              onClearHistory={() => {
+                setTransactions([]);
+                localStorage.removeItem('omnim_tx_history');
+              }}
+              onOpenSwap={() => {
+                setSwapFromAsset(undefined);
+                setSwapToAsset(undefined);
+                setIsSwapOpen(true);
+              }}
+            />
+          ) : (
+            <>
+              <HeroBalanceCard
+                wallet={wallet}
+                totalBalanceUsd={totalPortfolioValueUsd}
+                nimBalance={nimBalance}
+                onOpenReceive={() => setIsReceiveOpen(true)}
+                onOpenSend={() => setIsSendOpen(true)}
+                onOpenSwap={() => {
+                  setSwapFromAsset(undefined);
+                  setSwapToAsset(undefined);
+                  setIsSwapOpen(true);
+                }}
+                onOpenWalletDetails={() => setIsWalletDetailsOpen(true)}
+                onRefresh={refreshWalletAndBalances}
+                isRefreshing={isRefreshing}
+              />
 
-          <PortfolioSection
-            assets={assets}
-            discoveredAssets={discoveredAssets}
-            onSelectAssetForSwap={handleSelectAssetForSwap}
-          />
+              <PortfolioSection
+                assets={assets}
+                discoveredAssets={discoveredAssets}
+                onSelectAssetForSwap={handleSelectAssetForSwap}
+              />
+            </>
+          )}
         </main>
 
         <FloatingDock
@@ -451,7 +580,10 @@ export default function App() {
 
       <WalletDetailsModal
         isOpen={isWalletDetailsOpen}
-        onClose={() => setIsWalletDetailsOpen(false)}
+        onClose={() => {
+          setIsWalletDetailsOpen(false);
+          if (activeNavTab === 'profile') setActiveNavTab('dashboard');
+        }}
         wallet={wallet}
       />
     </div>

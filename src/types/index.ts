@@ -64,3 +64,23 @@ export interface WalletState {
   lastBlockHeight: number;
 }
 
+export interface TransactionRecord {
+  id: string;
+  type: 'swap' | 'send' | 'receive';
+  fromSymbol: string;
+  toSymbol?: string;
+  fromAmount: number;
+  toAmount?: number;
+  fromLogoUrl?: string;
+  toLogoUrl?: string;
+  timestamp: number;
+  status: 'confirmed' | 'pending' | 'needs_action';
+  txHash?: string;
+  chain: string;
+  explorerUrl?: string;
+  note?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+}
+
+
