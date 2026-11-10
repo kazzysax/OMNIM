@@ -13,7 +13,6 @@ interface HeroBalanceCardProps {
   onOpenWalletDetails: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
-  onConnectEvm?: () => void;
 }
 
 export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
@@ -26,7 +25,6 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   onOpenWalletDetails,
   onRefresh,
   isRefreshing,
-  onConnectEvm,
 }) => {
   return (
     <div className="mx-4 mt-2 mb-3 rounded-[36px] bg-[#1C1C1E] text-white shadow-xl overflow-hidden pb-5">
@@ -34,7 +32,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       <Header onOpenWalletDetails={onOpenWalletDetails} />
 
       {/* Wallet Dropdown Selector */}
-      <div className="flex items-center justify-center gap-2 mt-1 mb-2">
+      <div className="flex justify-center mt-1 mb-2">
         <button
           onClick={onOpenWalletDetails}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
@@ -42,15 +40,6 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
           <span>{wallet.nimiqAddress ? `${wallet.nimiqAddress.slice(0, 6)}...` : wallet.evmAddress ? `${wallet.evmAddress.slice(0, 6)}...${wallet.evmAddress.slice(-4)}` : 'Wallet 1'}</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
-
-        {!wallet.evmAddress && onConnectEvm && (
-          <button
-            onClick={onConnectEvm}
-            className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold hover:bg-amber-500/30 active:scale-95 transition-all shadow-sm"
-          >
-            <span>+ Connect EVM</span>
-          </button>
-        )}
       </div>
 
       {/* Big Hero Balance */}

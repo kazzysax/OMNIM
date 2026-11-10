@@ -6,10 +6,9 @@ interface ReceiveModalProps {
   isOpen: boolean;
   onClose: () => void;
   wallet: WalletState;
-  onConnectEvm?: () => void;
 }
 
-export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, wallet, onConnectEvm }) => {
+export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, wallet }) => {
   const [activeTab, setActiveTab] = useState<'evm' | 'nimiq'>('evm');
   const [copied, setCopied] = useState(false);
 
@@ -55,39 +54,23 @@ export const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, wal
           </button>
         </div>
 
-        {activeTab === 'evm' && !wallet.evmAddress ? (
-          <div className="p-4 my-2 rounded-2xl bg-slate-50 border border-slate-100 text-center space-y-3">
-            <p className="text-xs text-slate-600 font-medium">
-              EVM wallet is not connected yet. Connect your EVM account to view your deposit address.
-            </p>
-            <button
-              onClick={onConnectEvm}
-              className="w-full py-3 rounded-xl bg-[#1C1C1E] text-white text-xs font-bold active:scale-95 transition-all shadow-md hover:bg-black"
-            >
-              Connect EVM Wallet
-            </button>
+        <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl mx-auto my-2 flex items-center justify-center w-48 h-48">
+          <QrCode className="w-36 h-36 text-slate-900 stroke-[1.5]" />
+        </div>
+
+        <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
+          <div className="font-mono text-xs text-slate-800 break-all select-all font-medium">
+            {currentAddress}
           </div>
-        ) : (
-          <>
-            <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl mx-auto my-2 flex items-center justify-center w-48 h-48">
-              <QrCode className="w-36 h-36 text-slate-900 stroke-[1.5]" />
-            </div>
+        </div>
 
-            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-              <div className="font-mono text-xs text-slate-800 break-all select-all font-medium">
-                {currentAddress}
-              </div>
-            </div>
-
-            <button
-              onClick={handleCopy}
-              className="mt-3 w-full py-3 rounded-xl bg-[#1C1C1E] text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md hover:bg-black"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? 'Copied' : 'Copy Address'}</span>
-            </button>
-          </>
-        )}
+        <button
+          onClick={handleCopy}
+          className="mt-3 w-full py-3 rounded-xl bg-[#1C1C1E] text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md"
+        >
+          {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+          <span>{copied ? 'Copied' : 'Copy Address'}</span>
+        </button>
       </div>
     </div>
   );

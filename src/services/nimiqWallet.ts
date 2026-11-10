@@ -110,20 +110,6 @@ export async function connectDualWallet(): Promise<WalletState> {
   };
 }
 
-export async function initiateEvmConnection(): Promise<string | null> {
-  if (typeof window !== 'undefined' && window.ethereum) {
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts && accounts.length > 0) {
-        return accounts[0];
-      }
-    } catch (err) {
-      console.warn('Manual eth_requestAccounts error:', err);
-    }
-  }
-  return null;
-}
-
 export const CHAIN_RPC_MAP: Record<number, string[]> = {
   56: ['https://bsc.publicnode.com', 'https://1rpc.io/bnb'],
   137: ['https://polygon-bor-rpc.publicnode.com', 'https://1rpc.io/matic'],
@@ -373,18 +359,6 @@ export async function executeEvmTransaction(params: {
           formattedValue = '0x0';
         }
       }
-    }
-
-    if (!params.from) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts && accounts.length > 0) {
-          params.from = accounts[0];
-        } else {
-          const req = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          if (req && req.length > 0) params.from = req[0];
-        }
-      } catch { }
     }
 
     const txPayload: any = {
