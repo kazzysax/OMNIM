@@ -17,16 +17,9 @@ import { AppSplashIntro } from './components/AppSplashIntro';
 // Fast Instant Balance Cache from localStorage
 function getInitialAssets(): Asset[] {
   try {
-    const cached = localStorage.getItem('omnim_asset_balances');
-    if (cached) {
-      const balanceMap = JSON.parse(cached) as Record<string, number>;
-      return INITIAL_ASSETS.map((a) => ({
-        ...a,
-        userBalance: typeof balanceMap[a.id] === 'number' ? balanceMap[a.id] : a.userBalance,
-      }));
-    }
+    localStorage.removeItem('omnim_asset_balances');
   } catch { }
-  return INITIAL_ASSETS;
+  return INITIAL_ASSETS.map((a) => ({ ...a, userBalance: 0 }));
 }
 
 function getInitialDiscoveredAssets(): Asset[] {
@@ -127,10 +120,10 @@ export default function App() {
     // Initial fetch
     refreshWalletAndBalances();
 
-    // Regular polling every 7.5 seconds for snappy updates without network socket congestion
+    // Regular polling every 25 seconds for snappy updates without network socket congestion or RPC rate-limiting
     const timer = setInterval(() => {
       refreshWalletAndBalances();
-    }, 7500);
+    }, 25000);
 
     // Instant refresh when window or mobile app resumes / focused
     const handleFocus = () => refreshWalletAndBalances();
@@ -254,7 +247,13 @@ export default function App() {
 
           let balance = asset.userBalance;
           if (asset.symbol === 'NIM') {
-            balance = state.nimiqAddress ? state.nimiqBalanceLuna / 100000 : 0;
+            if (state.nimiqAddress) {
+              const currentLuna = state.nimiqBalanceLuna / 100000;
+              // If currentLuna is > 0 or consensus confirmed, use it; otherwise preserve existing balance during transient network hiccups
+              balance = currentLuna > 0 ? currentLuna : (asset.userBalance > 0 && !state.isConsensusEstablished ? asset.userBalance : currentLuna);
+            } else {
+              balance = 0;
+            }
           }
 
           return {
@@ -267,7 +266,12 @@ export default function App() {
       );
 
       // 3. Resilient EVM Multi-Chain balance query in controlled batches
-      if (state.evmAddress) {
+      if (!state.evmAddress) {
+        // If EVM wallet is disconnected, all EVM asset balances must be 0
+        setAssets((prev) =>
+          prev.map((asset) => (asset.chainId > 0 ? { ...asset, userBalance: 0 } : asset))
+        );
+      } else {
         const chunkSize = 6;
         const evmBalances: { id: string; bal: number | null }[] = [];
 
@@ -304,13 +308,13 @@ export default function App() {
             return asset;
           });
 
-          // Cache non-zero balances in localStorage for 0ms instant initial render
+          // Cache non-zero balances in localStorage scoped to this EVM address
           try {
             const balanceMap: Record<string, number> = {};
             updated.forEach((a) => {
               if (a.userBalance > 0) balanceMap[a.id] = a.userBalance;
             });
-            localStorage.setItem('omnim_asset_balances', JSON.stringify(balanceMap));
+            localStorage.setItem(`omnim_asset_balances_${state.evmAddress!.toLowerCase()}`, JSON.stringify(balanceMap));
           } catch { }
 
           return updated;

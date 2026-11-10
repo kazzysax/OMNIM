@@ -10,6 +10,8 @@ declare global {
 
 let cachedNimiqProvider: any = null;
 let initPromise: Promise<any> | null = null;
+let lastKnownNimiqBalanceLuna: number | null = null;
+let lastKnownNimiqAddress: string | null = null;
 
 async function getNimiqProvider() {
   if (cachedNimiqProvider) return cachedNimiqProvider;
@@ -46,8 +48,17 @@ export async function connectDualWallet(): Promise<WalletState> {
         nimiqAddress = accounts[0];
         if (typeof nimiqProvider.getBalance === 'function') {
           try {
-            nimiqBalanceLuna = await nimiqProvider.getBalance(nimiqAddress);
-          } catch { }
+            const bal = await nimiqProvider.getBalance(nimiqAddress);
+            if (typeof bal === 'number') {
+              nimiqBalanceLuna = bal;
+              lastKnownNimiqBalanceLuna = bal;
+              lastKnownNimiqAddress = nimiqAddress;
+            }
+          } catch {
+            if (lastKnownNimiqAddress === nimiqAddress && lastKnownNimiqBalanceLuna !== null) {
+              nimiqBalanceLuna = lastKnownNimiqBalanceLuna;
+            }
+          }
         }
       }
 
@@ -70,10 +81,19 @@ export async function connectDualWallet(): Promise<WalletState> {
         if (accounts && accounts.length > 0) {
           nimiqAddress = accounts[0];
           if (typeof window.nimiq.getBalance === 'function') {
-            nimiqBalanceLuna = await window.nimiq.getBalance(nimiqAddress);
+            const bal = await window.nimiq.getBalance(nimiqAddress);
+            if (typeof bal === 'number') {
+              nimiqBalanceLuna = bal;
+              lastKnownNimiqBalanceLuna = bal;
+              lastKnownNimiqAddress = nimiqAddress;
+            }
           }
         }
-      } catch { }
+      } catch {
+        if (lastKnownNimiqAddress === nimiqAddress && lastKnownNimiqBalanceLuna !== null) {
+          nimiqBalanceLuna = lastKnownNimiqBalanceLuna;
+        }
+      }
     }
   }
 
@@ -111,31 +131,49 @@ export async function connectDualWallet(): Promise<WalletState> {
 }
 
 export const CHAIN_RPC_MAP: Record<number, string[]> = {
-  56: ['https://bsc.publicnode.com', 'https://56.rpc.thirdweb.com'],
+  1: [
+    'https://eth.llamarpc.com',
+    'https://rpc.ankr.com/eth',
+    'https://cloudflare-eth.com',
+    'https://ethereum-rpc.publicnode.com',
+    'https://1.rpc.thirdweb.com',
+  ],
+  56: [
+    'https://bsc-dataseed.binance.org',
+    'https://bsc-dataseed1.defibit.io',
+    'https://binance.llamarpc.com',
+    'https://bsc.publicnode.com',
+    'https://56.rpc.thirdweb.com',
+  ],
   137: [
+    'https://polygon-rpc.com',
     'https://polygon-bor-rpc.publicnode.com',
-    'https://polygon.gateway.tenderly.co',
+    'https://polygon.llamarpc.com',
     'https://137.rpc.thirdweb.com',
     'https://polygon.drpc.org',
   ],
   8453: [
     'https://mainnet.base.org',
+    'https://base.llamarpc.com',
     'https://8453.rpc.thirdweb.com',
     'https://base.gateway.tenderly.co',
   ],
   42161: [
-    'https://arbitrum-one-rpc.publicnode.com',
     'https://arb1.arbitrum.io/rpc',
+    'https://arbitrum.llamarpc.com',
+    'https://arbitrum-one-rpc.publicnode.com',
     'https://42161.rpc.thirdweb.com',
   ],
   10: [
-    'https://optimism-rpc.publicnode.com',
     'https://mainnet.optimism.io',
+    'https://optimism.llamarpc.com',
+    'https://optimism-rpc.publicnode.com',
     'https://10.rpc.thirdweb.com',
   ],
   43114: [
-    'https://avalanche-c-chain-rpc.publicnode.com',
     'https://api.avax.network/ext/bc/C/rpc',
+    'https://avalanche.public-rpc.com',
+    'https://avalanche-c-chain-rpc.publicnode.com',
   ],
 };
 
@@ -173,7 +211,7 @@ export async function fetchRealEvmBalance(
       ],
     };
 
-  // 1. Try injected window.ethereum first ONLY if the wallet is currently connected to this specific chain
+  // 1. Try injected window.ethereum first ONLY if the wallet is currently connected to THIS EXACT chain
   if (typeof window !== 'undefined' && window.ethereum) {
     try {
       let isWindowEthereumOnThisChain = false;
@@ -214,10 +252,10 @@ export async function fetchRealEvmBalance(
 
   const rpcs = CHAIN_RPC_MAP[chainId] || [];
 
-  // Fast fetch function with 2800ms timeout
+  // Fast fetch function with 3200ms timeout
   const fetchSingleRpc = async (rpcUrl: string): Promise<number> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2800);
+    const timeoutId = setTimeout(() => controller.abort(), 3200);
     try {
       const res = await fetch(rpcUrl, {
         method: 'POST',
@@ -250,45 +288,13 @@ export async function fetchRealEvmBalance(
     }
   };
 
-  // 2. Race all active public RPC endpoints in parallel for instantaneous result
+  // 2. Query public RPC endpoints for the target chain (never cross-contaminate across chains)
   if (rpcs.length > 0) {
     try {
-      return await Promise.any(rpcs.map((url) => fetchSingleRpc(url)));
+      // Race the top 3 endpoints for this chain
+      return await Promise.any(rpcs.slice(0, 3).map((url) => fetchSingleRpc(url)));
     } catch {
-      // All RPCs in Promise.any failed, fall through to window.ethereum fallback
-    }
-  }
-
-  // 3. Fallback to injected window.ethereum as last resort
-  if (typeof window !== 'undefined' && window.ethereum) {
-    try {
-      if (isNative) {
-        const balanceWeiHex = await window.ethereum.request({
-          method: 'eth_getBalance',
-          params: [userAddress, 'latest'],
-        });
-        if (balanceWeiHex && balanceWeiHex !== '0x') {
-          const balanceWei = BigInt(balanceWeiHex);
-          return Number(balanceWei) / Math.pow(10, decimals);
-        }
-      } else {
-        const balanceHex = await window.ethereum.request({
-          method: 'eth_call',
-          params: [
-            {
-              to: tokenAddress,
-              data: '0x70a08231' + cleanAddr,
-            },
-            'latest',
-          ],
-        });
-
-        if (balanceHex && balanceHex !== '0x') {
-          const balanceBig = BigInt(balanceHex);
-          return Number(balanceBig) / Math.pow(10, decimals);
-        }
-      }
-    } catch {
+      // All RPCs for this chain timed out or errored
       return null;
     }
   }
