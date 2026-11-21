@@ -177,15 +177,22 @@ async function build() {
   // Small concurrency keeps us inside the free CoinGecko / Yahoo limits.
   const worker = async () => {
     for (let i = queue.shift(); i; i = queue.shift()) {
-      try {
-        const { closes, asOf } = await fetchCloses(i);
-        data.push(computeStats(i, closes, asOf));
-      } catch {
-        failed.push(i.symbol);
+      // CoinGecko's free tier rate-limits bursts: retry politely with a pause.
+      let done = false;
+      for (let attempt = 0; attempt < 3 && !done; attempt++) {
+        try {
+          if (attempt > 0) await new Promise((r) => setTimeout(r, 2500 * attempt));
+          const { closes, asOf } = await fetchCloses(i);
+          data.push(computeStats(i, closes, asOf));
+          done = true;
+        } catch {
+          /* retry */
+        }
       }
+      if (!done) failed.push(i.symbol);
     }
   };
-  await Promise.all([worker(), worker(), worker()]);
+  await Promise.all([worker(), worker()]);
   return { data, failed, at: Date.now() };
 }
 
