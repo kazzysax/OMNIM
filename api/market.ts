@@ -1,4 +1,4 @@
-import { getSnapshot, ranked } from './_lib/market';
+import { getSnapshot, ranked } from './_lib/market.js';
 
 export default async function handler(_req: any, res: any) {
   try {

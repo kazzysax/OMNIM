@@ -1,4 +1,4 @@
-import { getSnapshot, ranked, Stats } from './_lib/market';
+import { getSnapshot, ranked, type Stats } from './_lib/market.js';
 
 const MODELS = [process.env.OPENROUTER_MODEL, 'openai/gpt-oss-120b', 'deepseek/deepseek-v4-flash', 'google/gemini-2.5-flash-lite'].filter(Boolean) as string[];
 const MAX_MESSAGES = 10;
