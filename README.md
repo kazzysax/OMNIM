@@ -1,6 +1,6 @@
 # OMNIM
 
-> A non-custodial multi-asset portfolio and swap app for the **Nimiq Pay** mini-app ecosystem. Hold and swap tokenized stocks, gold, on-chain currencies and crypto across six chains from the wallet you already have in Nimiq Pay.
+> A non-custodial multi-asset portfolio and swap app for the **Nimiq Pay** mini-app ecosystem. Hold and swap tokenized stocks, ETFs, gold, on-chain currencies and crypto across six chains from the wallet you already use in Nimiq Pay.
 
 [![Live](https://img.shields.io/badge/Live%20App-omnim--io.vercel.app-E5B887?style=flat&logo=vercel)](https://omnim-io.vercel.app)
 [![Nimiq Mini-Apps](https://img.shields.io/badge/Nimiq-Mini--App%20SDK-E5B887?style=flat)](https://nimiq.dev/mini-apps)
@@ -16,42 +16,56 @@ Built for the Nimiq Mini-Apps Challenge, track *"Extend What Users Can Hold"*.
 
 | | |
 | :-- | :-- |
-| **Portfolio** | Balances for 66 assets across Nimiq, BNB Chain, Polygon, Base, Arbitrum, OP Mainnet and Avalanche, with live USD prices and 24h change. |
-| **Swap** | Cross-chain and same-chain swaps routed through Relay and Li.Fi. Shows the real total cost (fees + gas + slippage) before you sign. |
+| **Portfolio** | Balances for 56 assets across Nimiq, BNB Chain, Polygon, Base, Arbitrum, OP Mainnet and Avalanche, with live USD prices and 24h change. Balances refresh automatically and again after each transaction. |
+| **Swap** | Cross-chain and same-chain swaps routed through Relay and Li.Fi. Shows the total cost (fees, gas and slippage) before you sign. |
 | **Send / Receive** | QR and copy flows for both your Nimiq (`NQ…`) and EVM (`0x…`) addresses. |
-| **Activity** | Your own swap and transfer history, stored on your device, with explorer links. |
+| **Activity** | Your swap and transfer history, stored on your device, with explorer links. |
+| **OMNIM AI** | A floating assistant for the market data in the app. It ranks assets from recent price history and answers questions about them in plain language. It does not give financial advice. |
 
-Keys never leave Nimiq Pay: OMNIM talks to `window.nimiq` (via `@nimiq/mini-app-sdk`) and the injected EIP-1193 `window.ethereum`, and Nimiq Pay shows the PIN or biometric prompt for every transaction. Outside Nimiq Pay (a normal browser) there is no wallet, so balances stay at zero.
+Keys never leave Nimiq Pay. OMNIM talks to `window.nimiq` (via `@nimiq/mini-app-sdk`) and the injected EIP-1193 `window.ethereum`, and Nimiq Pay shows the PIN or biometric prompt for every transaction. Outside Nimiq Pay, in a normal browser, there is no wallet, so balances stay at zero.
 
 ## How it works
 
 ```mermaid
 flowchart LR
     Pay["Nimiq Pay<br/>window.nimiq + window.ethereum"] --> App["OMNIM (React + Vite)"]
-    App --> Bal["Balances<br/>1 Multicall3 call per chain"]
+    App --> Bal["Balances<br/>one Multicall3 call per chain"]
     App --> Px["Prices<br/>CoinGecko + Relay price API"]
     App --> Route["Routing engine"]
     Route --> Relay["Relay<br/>(first choice)"]
     Route -.->|"only if Relay fails<br/>or costs &gt; 1%"| LiFi["Li.Fi<br/>(fallback)"]
+    App --> AI["OMNIM AI<br/>/api/chat"]
+    AI --> OR["OpenRouter<br/>(model fallback chain)"]
+    App --> Mkt["/api/market"]
+    Mkt --> Data["Yahoo Finance + CoinGecko"]
 ```
 
-**Routing** (`src/services/routing.ts`). A quote asks Relay first. If Relay fails or its route costs more than 1%, Li.Fi is asked too and the route that leaves you with more value wins. Cost is measured from the routers' own USD values, and **any route costing more than 5% is blocked**, so a thin-liquidity pool can never be presented as a normal quote. Quotes older than 30 seconds are refreshed before you can sign them. Token approvals are for the exact swap amount, never unlimited.
+**Routing** (`src/services/routing.ts`). A quote asks Relay first. If Relay fails or its route costs more than 1%, Li.Fi is asked as well and the better route is used. Cost is measured from the routers' own USD values. Any route costing more than 5% is blocked, so a thin-liquidity pool is never presented as a normal quote. Quotes older than 30 seconds are refreshed before you can sign them. Token approvals cover the exact swap amount, never an unlimited allowance.
 
 **Why Relay first?** Li.Fi's free tier allows roughly 75 requests per 2 hours per IP. The app remembers a rate-limit response and skips Li.Fi until it resets. Set `VITE_LIFI_API_KEY` to lift the limit (see [Setup](#setup)).
 
-**Prices** (`src/services/prices.ts`). Majors (NIM, BNB, ETH, POL, AVAX, ARB, OP, BTC) come from CoinGecko with its 24h change. Everything else is priced by Relay's token price API, the same source Relay uses to value quotes. Relay provides no 24h change, so it is computed from price samples saved on your device and shows `0.00%` until a day of history exists. A price that jumps more than 35% between refreshes is ignored as a glitch.
+**Prices** (`src/services/prices.ts`). Majors (NIM, BNB, ETH, POL, AVAX, ARB, OP, BTC and USDT) come from one batched CoinGecko call that also provides a 24h change. Everything else is priced by Relay's token price API, the same source Relay uses to value quotes. Relay provides no 24h change, so it is computed from price samples saved on your device and shows `0.00%` until a day of history exists. A price that moves more than 35% between refreshes is ignored as a likely pool glitch.
 
-**Balances** (`src/services/balances.ts`). One batched Multicall3 `eth_call` per chain, raced across public RPC endpoints. If a chain's RPC fails, the previous balance is kept instead of dropping to zero.
+**Balances** (`src/services/balances.ts`). One batched Multicall3 `eth_call` per chain, raced across up to three public RPC endpoints. If a chain's RPC fails, the previous balance is kept rather than shown as zero.
+
+**Token discovery** (`src/services/tokenDiscovery.ts`). Tokens held in your wallet that are not in the registry are picked up from recent transfer logs, so holdings are never hidden simply because they are unlisted.
+
+**OMNIM AI** (`api/chat.ts`, `api/market.ts`, `api/_lib/market.ts`). Two serverless functions run on Vercel.
+
+- **Market pulse.** `/api/market` covers a fixed universe of stocks, ETFs, gold and crypto. Stocks and ETFs come from Yahoo Finance. Gold and crypto come from CoinGecko, with Yahoo as a fallback for some crypto. For each instrument it computes 7-, 30-, 90- and 365-day returns, annualised volatility, maximum drawdown, distance from the 52-week high, and a 50/200-day moving-average trend. These feed a risk-adjusted score. Results are cached on the server and at the edge for 15 minutes, and a stale result is served while it refreshes.
+- **Chat.** `/api/chat` sends your question and the current market data to OpenRouter. It tries a chain of models in order, starting with `OPENROUTER_MODEL` if set. If every model fails, it returns the data alone. Each reply states the data date, ends any view with "NFA" (not financial advice), and is limited to 20 requests per 10 minutes per IP address.
 
 ## Assets
 
-Each asset is listed once, on the chain and provider with the cheapest verified routing (USDC and USDT are the only exceptions and are offered on several chains). Duplicates of an asset that older versions listed (extra EUR, BTC, ETH, gold and USD tokens) stay hidden unless you already hold a balance, so no funds ever disappear from the wallet.
+Each asset is listed once, on the chain and provider with the cheapest verified routing. USDC and USDT are the only exceptions and are offered on several chains. Older versions listed duplicate tokens for some assets (extra EUR, BTC, ETH, gold and USD tokens). These stay hidden unless you already hold a balance, in which case they remain visible.
 
-Every asset below passes `npm run verify:assets`: the contract exists on-chain with matching decimals, and Relay and/or Li.Fi return a real quote at a low cost (see [Verification](#verification)). Tokens that did not route cheaply are **not** listed.
+Every listed asset passes `npm run verify:assets`: the contract exists on-chain with matching decimals, and Relay and/or Li.Fi return a real quote at an acceptable cost (see [Verification](#verification)). Tokens that did not route cheaply are not listed.
 
-### Tokenized stocks and ETFs (BNB Chain)
+The full registry, including legacy entries, is in `src/config/assets.registry.json`. The 56 assets below are the ones shown in the app.
 
-Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` symbols) plus Apple (`AAPLB`). Ondo tokens are not available to US persons. Check the issuer's terms before trading.
+### Tokenized stocks and ETFs
+
+Ondo Global Markets tokens (`…on` symbols) and Apple (`AAPLB`). Ondo tokens are not available to US persons. Check the issuer's terms and your local rules before trading.
 
 | Symbol | Name | Chain | Contract |
 | :-- | :-- | :-- | :-- |
@@ -109,9 +123,9 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 
 | Symbol | Name | Chain | Contract |
 | :-- | :-- | :-- | :-- |
-| `BNB` | BNB | BNB Chain | native gas token |
-| `AVAX` | Avalanche | Avalanche | native gas token |
-| `POL` | Polygon | Polygon | native gas token |
+| `BNB` | BNB | BNB Chain | [`0x0000…0000`](https://bscscan.com/token/0x0000000000000000000000000000000000000000) |
+| `AVAX` | Avalanche | Avalanche | [`0x0000…0000`](https://snowtrace.io/token/0x0000000000000000000000000000000000000000) |
+| `POL` | Polygon | Polygon | [`0x0000…0000`](https://polygonscan.com/token/0x0000000000000000000000000000000000000000) |
 | `AAVE` | Aave (BNB Chain) | BNB Chain | [`0xfb61…f802`](https://bscscan.com/token/0xfb6115445Bff7b52FeB98650C87f44907E58f802) |
 | `BTCB` | Bitcoin (BTCB) | BNB Chain | [`0x7130…ad9c`](https://bscscan.com/token/0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c) |
 | `CAKE` | PancakeSwap | BNB Chain | [`0x0E09…cE82`](https://bscscan.com/token/0x0E09FaBB73BD3Ade0a17ECC321fD13a19e81cE82) |
@@ -130,14 +144,13 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 | `OP` | Optimism | OP Mainnet | [`0x4200…0042`](https://optimistic.etherscan.io/token/0x4200000000000000000000000000000000000042) |
 | `PENDLE` | Pendle | Arbitrum | [`0x0c88…c9e8`](https://arbiscan.io/token/0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8) |
 | `VIRTUAL` | Virtuals Protocol | Base | [`0x0b3e…7E1b`](https://basescan.org/token/0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b) |
-| `WETH` | Wrapped Ether (Polygon) | Polygon | [`0x7ceB…f619`](https://polygonscan.com/token/0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619) |
+| `WETH` | Ethereum (WETH) | Polygon | [`0x7ceB…f619`](https://polygonscan.com/token/0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619) |
 
-NIM (native Nimiq) is shown with balance and price. **Swaps to and from NIM are paused** while the Fastspot atomic-swap relayer is unavailable.
+NIM (native Nimiq) is shown with balance and price. **Swaps to and from NIM are paused** while the Fastspot atomic-swap relayer is unavailable. Balances and transfers still work.
 
-† Verified buying at $20 through Li.Fi, but the Li.Fi rate limit prevented a full re-check of selling and $200 depth on the day of listing. Run `npm run verify:assets` with a Li.Fi key to complete it.
-‡ Can be sold but not bought: Relay cannot route stablecoin → native ETH on this chain.
+† Verified for buying through Li.Fi, but the selling and $200 depth checks could not be fully re-run because of Li.Fi rate limits. Run `npm run verify:assets` with a Li.Fi key to complete them.
 
-Other xStocks and Backed bTokens exist on-chain, but at the time of verification no Relay or Li.Fi route could trade them at a sane price (quotes returned losses of 30–99%), so they are intentionally excluded.
+Several other xStocks, Backed bTokens and ETF tokens were tested and excluded, because no Relay or Li.Fi route could trade them at an acceptable cost.
 
 ## Verification
 
@@ -147,7 +160,7 @@ npm run verify:assets:onchain    # on-chain checks only (no router quota used)
 node scripts/verify-assets.mjs candidates.json --write verified.json   # vet new tokens
 ```
 
-For each asset the script checks the contract and `decimals()` on-chain, then requires a **$20 buy, a $200 buy and a $20 sell** to cost under 2.5% / 3.5% / 3.5% according to the routers' own USD values. It queries Relay first and falls back to Li.Fi like the app does, and exits non-zero on any failure. Add a token by putting it in a candidates file, verifying, and merging the result into `src/config/assets.registry.json`.
+For each asset the script checks the contract and `decimals()` on-chain. It then requires a $20 buy, a $200 buy and a $20 sell to return a quote costing under 2.5%, 3.5% and 3.5% respectively, according to the routers' own USD values. It queries Relay first and falls back to Li.Fi, as the app does, and exits non-zero on any failure. To add a token, put it in a candidates file, verify it, and merge the result into `src/config/assets.registry.json`.
 
 ## Setup
 
@@ -158,30 +171,43 @@ npm run dev        # Vite dev server, reachable on your LAN for phone testing
 npm run build      # type-check + production build
 ```
 
-Optional environment variable:
+Environment variables:
 
-| Variable | Purpose |
-| :-- | :-- |
-| `VITE_LIFI_API_KEY` | Li.Fi API key. Without it the free tier (~75 requests / 2h per IP) applies and the app falls back to Relay-only when it is exhausted. |
+| Variable | Where | Purpose |
+| :-- | :-- | :-- |
+| `VITE_LIFI_API_KEY` | Client (optional) | Li.Fi API key. Without it the free tier (~75 requests / 2h per IP) applies, and the app falls back to Relay-only when it is exhausted. |
+| `OPENROUTER_API_KEY` | Server (required for OMNIM AI) | OpenRouter key used by `/api/chat`. Set it in the Vercel project for Production and Preview, or in `.env.local` for `vercel dev`. Never expose it in client code. |
+| `OPENROUTER_MODEL` | Server (optional) | Model to try first, ahead of the built-in fallback chain. |
 
-**Testing inside Nimiq Pay:** open Nimiq Pay's Mini-Apps developer settings and enter your machine's LAN address (e.g. `http://192.168.1.X:5173`) or `https://omnim-io.vercel.app`.
+Copy `.env.example` to `.env.local` for local work. Keep `.env.local` out of version control.
+
+**Testing inside Nimiq Pay:** open Nimiq Pay's Mini-Apps developer settings and enter your machine's LAN address (for example `http://192.168.1.X:5173`) or `https://omnim-io.vercel.app`.
 
 ## Project layout
 
 ```
+api/
+  chat.ts                       OMNIM AI chat endpoint (OpenRouter)
+  market.ts                     market ranking endpoint
+  _lib/market.ts                data fetching, metrics and scoring
 src/
-  config/assets.registry.json   verified token list (data)
+  config/assets.registry.json   token list (single source of truth)
   config/assets.ts              builds typed assets from the registry
+  components/                   UI (portfolio, swap, send/receive, OMNIM AI)
+  components/AssetLogo.tsx      shared logo with emoji/initial fallback
   services/routing.ts           Relay + Li.Fi quote engine and cost guard
   services/prices.ts            live prices and local 24h history
   services/balances.ts          Multicall3 batched balances
+  services/tokenDiscovery.ts    detection of unlisted wallet tokens
   services/nimiqWallet.ts       Nimiq Pay + EIP-1193 wallet bridge
+public/logos/                   self-hosted asset logos
 scripts/verify-assets.mjs       on-chain and routing verifier
+vercel.json                     build, headers and function settings
 ```
 
 ## Deployment
 
-Hosted on Vercel; pushes to `main` deploy automatically.
+Hosted on Vercel. Pushes to `main` deploy automatically. Serverless functions in `api/` run with a 30-second limit (`vercel.json`), and `OPENROUTER_API_KEY` is configured as a sensitive environment variable on the Vercel project.
 
 ## License
 
