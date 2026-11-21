@@ -191,12 +191,21 @@ async function build() {
 
 export async function getSnapshot() {
   if (cache && Date.now() - cache.at < TTL) return cache;
+  // Stale data beats no data: serve it immediately and refresh behind the scenes.
+  if (cache) {
+    void refresh().catch(() => {});
+    return cache;
+  }
+  return refresh();
+}
+
+function refresh() {
   if (!inflight) {
     inflight = build()
       .then((r) => {
         // Keep the previous good snapshot if this attempt got almost nothing.
-        if (r.data.length >= 3 || !cache) cache = r;
-        return cache!;
+        if (r.data.length >= 3) cache = r;
+        return cache ?? r; // an empty result is returned but never cached, so the next call retries
       })
       .finally(() => {
         inflight = null;

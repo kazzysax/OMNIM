@@ -1,6 +1,6 @@
 import { getSnapshot, ranked, Stats } from './_lib/market';
 
-const MODEL = process.env.OPENROUTER_MODEL || 'openai/gpt-oss-120b';
+const MODELS = [process.env.OPENROUTER_MODEL, 'openai/gpt-oss-120b', 'deepseek/deepseek-v4-flash', 'google/gemini-2.5-flash-lite'].filter(Boolean) as string[];
 const MAX_MESSAGES = 10;
 const MAX_CHARS = 1000;
 
@@ -55,10 +55,12 @@ export default async function handler(req: any, res: any) {
   }
 
   let data = '';
+  let top: Stats[] = [];
   let asOf = '';
   try {
     const snap = await getSnapshot();
     const order = ranked(snap.data);
+    top = order;
     const rest = snap.data.filter((s) => s.score === null);
     data = table([...order, ...rest]);
     asOf = new Date(snap.at).toISOString();
@@ -67,32 +69,48 @@ export default async function handler(req: any, res: any) {
     data = 'NO MARKET DATA COULD BE LOADED RIGHT NOW. Say so and do not quote any figures.';
   }
 
-  try {
-    const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://omnim-io.vercel.app',
-        'X-Title': 'OMNIM AI',
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1500,
-        temperature: 0.3,
-        reasoning: { effort: 'low' },
-        messages: [
-          { role: 'system', content: `${SYSTEM}\n\nDATA (ranked by score, snapshot ${asOf}):\n${data}` },
-          ...messages,
-        ],
-      }),
-    });
-    if (!r.ok) return res.status(502).json({ error: 'The AI service is busy. Try again in a moment.' });
-    const json: any = await r.json();
-    const reply = json?.choices?.[0]?.message?.content?.trim();
-    if (!reply) return res.status(502).json({ error: 'No answer came back. Try again.' });
-    return res.status(200).json({ reply, dataAsOf: asOf });
-  } catch {
-    return res.status(502).json({ error: 'The AI service is unreachable. Try again shortly.' });
+  const system = `${SYSTEM}\n\nDATA (ranked by score, snapshot ${asOf}):\n${data}`;
+  // Try each model in turn (one retry on the first) so a single provider hiccup never kills the chat.
+  for (const [idx, model] of MODELS.entries()) {
+    for (let attempt = 0; attempt < (idx === 0 ? 2 : 1); attempt++) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 20000);
+        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          signal: ctrl.signal,
+          headers: {
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://omnim-io.vercel.app',
+            'X-Title': 'OMNIM AI',
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 1500,
+            temperature: 0.3,
+            ...(idx === 0 ? { reasoning: { effort: 'low' } } : {}),
+            messages: [{ role: 'system', content: system }, ...messages],
+          }),
+        }).finally(() => clearTimeout(timer));
+        if (!r.ok) continue;
+        const json: any = await r.json();
+        const reply = json?.choices?.[0]?.message?.content?.trim();
+        if (reply) return res.status(200).json({ reply, dataAsOf: asOf });
+      } catch {
+        /* try again / next model */
+      }
+    }
   }
+
+  // Every model failed: still be useful with a plain data summary.
+  if (top.length > 0) {
+    const lines = top.slice(0, 5).map((s) => `• **${s.symbol}** (${s.name}): 90d ${pct(s.ret90d)}, volatility ${pct(s.volAnn)}, worst drop ${pct(s.maxDrawdown1y)}, trend ${s.trend}`);
+    return res.status(200).json({
+      reply: `The AI is busy right now, so here is the raw data instead. Strongest recent risk-adjusted momentum:\n${lines.join('\n')}\n\nThis is a screen of past data, not a signal. Not financial advice.`,
+      dataAsOf: asOf,
+      degraded: true,
+    });
+  }
+  return res.status(502).json({ error: 'The AI service is busy. Please try again in a moment.' });
 }
