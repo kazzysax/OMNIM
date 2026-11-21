@@ -40,7 +40,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   ];
 
   return (
-    <div className="relative mx-4 mt-3 mb-5 rounded-[32px] bg-[#1C1C1E] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)] overflow-hidden min-h-[30vh] flex flex-col px-6 pt-5 pb-6">
+    <div className="relative mx-4 mt-3 mb-5 rounded-[32px] bg-[#1C1C1E] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)] overflow-hidden min-h-[25vh] flex flex-col px-6 pt-4 pb-4">
       {/* Soft top highlight for depth */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/[0.06] to-transparent" />
 
@@ -57,7 +57,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       </div>
 
       {/* Balance */}
-      <div className="relative flex-1 flex flex-col items-center justify-center pt-5 pb-7">
+      <div className="relative flex-1 flex flex-col items-center justify-center pt-2 pb-4">
         <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
           <span>Total balance</span>
           <button
@@ -78,11 +78,11 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
       </div>
 
       {/* Actions: three equal columns */}
-      <div className="relative grid grid-cols-3 gap-3 mt-1">
+      <div className="relative grid grid-cols-3 gap-3">
         {actions.map(({ label, icon: Icon, onClick }) => (
-          <button key={label} onClick={onClick} className="group flex flex-col items-center gap-2 active:scale-95 transition-transform">
+          <button key={label} onClick={onClick} className="group flex flex-col items-center gap-1.5 active:scale-95 transition-transform">
             <span
-              className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-colors ${
+              className={`w-[46px] h-[46px] rounded-full flex items-center justify-center transition-colors ${
                 label === 'Swap'
                   ? 'bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark text-black'
                   : 'bg-white/[0.08] text-white group-hover:bg-white/[0.14]'
