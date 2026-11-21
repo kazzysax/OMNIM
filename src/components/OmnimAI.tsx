@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { Send, X, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Msg {
@@ -28,8 +28,10 @@ const pct = (v: number | null) => (v === null ? '–' : `${v >= 0 ? '+' : ''}${(
 function renderText(text: string) {
   return text.split('\n').map((line, i) => (
     <p key={i} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
-      {line.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-        part.startsWith('**') && part.endsWith('**') ? (
+      {line.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, j) =>
+        part.startsWith('*') && !part.startsWith('**') && part.endsWith('*') && part.length > 2 ? (
+          <em key={j} className="text-omnim-muted">{part.slice(1, -1)}</em>
+        ) : part.startsWith('**') && part.endsWith('**') ? (
           <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>
         ) : (
           <span key={j}>{part.replace(/^\s*[-•]\s+/, '• ')}</span>
@@ -47,6 +49,53 @@ export default function OmnimAI() {
   const [error, setError] = useState('');
   const [ranking, setRanking] = useState<RankedItem[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Draggable launcher: position persists, a tap (no movement) opens the chat.
+  const SIZE = { w: 76, h: 48 };
+  const clamp = (x: number, y: number) => ({
+    x: Math.min(Math.max(8, x), window.innerWidth - SIZE.w - 8),
+    y: Math.min(Math.max(8, y), window.innerHeight - SIZE.h - 8),
+  });
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('omnim_ai_pos') || 'null');
+      if (saved && typeof saved.x === 'number') return clamp(saved.x, saved.y);
+    } catch { /* ignore */ }
+    return clamp(window.innerWidth - SIZE.w - 16, window.innerHeight - 170);
+  });
+  const drag = useRef<{ dx: number; dy: number; sx: number; sy: number; moved: boolean } | null>(null);
+
+  useEffect(() => {
+    const onResize = () => setPos((p) => clamp(p.x, p.y));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onDown = (e: RPointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y, sx: e.clientX, sy: e.clientY, moved: false };
+  };
+  const onMove = (e: RPointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 6) d.moved = true;
+    if (d.moved) setPos(clamp(e.clientX - d.dx, e.clientY - d.dy));
+  };
+  const onUp = () => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    if (d.moved) {
+      // Snap to the nearest side edge so it never sits over content.
+      setPos((p) => {
+        const snapped = clamp(p.x + SIZE.w / 2 < window.innerWidth / 2 ? 12 : window.innerWidth - SIZE.w - 12, p.y);
+        try { localStorage.setItem('omnim_ai_pos', JSON.stringify(snapped)); } catch { /* ignore */ }
+        return snapped;
+      });
+    } else {
+      setOpen(true);
+    }
+  };
 
   useEffect(() => {
     if (!open || ranking.length > 0) return;
@@ -91,9 +140,13 @@ export default function OmnimAI() {
     <>
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          aria-label="Open OMNIM AI"
-          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 pl-3 pr-4 h-12 rounded-full bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark text-black font-bold text-sm shadow-glow-gold active:scale-95 transition-transform"
+          onPointerDown={onDown}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={() => (drag.current = null)}
+          aria-label="Open OMNIM AI (drag to move)"
+          style={{ left: pos.x, top: pos.y, touchAction: 'none' }}
+          className="fixed z-40 flex items-center justify-center gap-2 w-[76px] h-12 rounded-full bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark text-black font-bold text-sm shadow-glow-gold select-none cursor-grab active:cursor-grabbing"
         >
           <Sparkles size={18} />
           AI
