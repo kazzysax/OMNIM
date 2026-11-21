@@ -6,8 +6,7 @@ import { Header } from './Header';
 interface HeroBalanceCardProps {
   wallet: WalletState;
   totalBalanceUsd: number;
-  /** Portfolio 24h change in USD and %, or null when no held asset has 24h data yet. */
-  change24h: { usd: number; pct: number } | null;
+  nimBalance: number;
   onOpenReceive: () => void;
   onOpenSend: () => void;
   onOpenSwap: () => void;
@@ -19,7 +18,7 @@ interface HeroBalanceCardProps {
 export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   wallet,
   totalBalanceUsd,
-  change24h,
+  nimBalance,
   onOpenReceive,
   onOpenSend,
   onOpenSwap,
@@ -38,7 +37,7 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
           onClick={onOpenWalletDetails}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
         >
-          <span>{wallet.evmAddress ? `${wallet.evmAddress.slice(0, 6)}…${wallet.evmAddress.slice(-4)}` : wallet.nimiqAddress ? `${wallet.nimiqAddress.slice(0, 9)}…` : 'Not connected'}</span>
+          <span>{wallet.nimiqAddress ? `${wallet.nimiqAddress.slice(0, 6)}...` : wallet.evmAddress ? `${wallet.evmAddress.slice(0, 6)}...${wallet.evmAddress.slice(-4)}` : 'Wallet 1'}</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -48,22 +47,15 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
         <h1 className="text-4xl sm:text-[44px] font-bold tracking-tight text-white">
           ${totalBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>
-        <div className="flex items-center justify-center gap-1.5 mt-1 text-xs font-medium text-slate-400">
-          {change24h && change24h.usd !== 0 ? (
-            <span className={change24h.usd > 0 ? 'text-emerald-400' : 'text-red-400'}>
-              {change24h.usd > 0 ? '+' : '-'}${Math.abs(change24h.usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              {' '}({change24h.pct > 0 ? '+' : ''}{change24h.pct.toFixed(2)}%) today
-            </span>
-          ) : (
-            <span>Total balance</span>
-          )}
+        <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-slate-400 font-medium">
+          <span>{nimBalance > 0 ? nimBalance.toFixed(2) : '0.00'} NIM</span>
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            title="Refresh balances"
-            className="p-1 -m-1 text-slate-500 hover:text-slate-300 transition-colors"
+            title="Refresh on-chain balances"
+            className="p-1 -m-1 hover:text-slate-300 transition-colors"
           >
-            <RotateCcw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+            <RotateCcw className={`w-3 h-3 text-slate-500 hover:text-slate-300 transition-transform ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
           </button>
         </div>
       </div>

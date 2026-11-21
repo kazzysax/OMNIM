@@ -254,15 +254,8 @@ export default function App() {
     0
   );
 
-  const portfolioChange24h = useMemo(() => {
-    const held = allCombinedAssets.filter((a) => a.userBalance > 0 && a.priceUsd > 0);
-    const withData = held.filter((a) => a.change24h);
-    if (withData.length === 0) return null;
-    const now = held.reduce((s, a) => s + a.userBalance * a.priceUsd, 0);
-    const usd = withData.reduce((s, a) => s + a.userBalance * (a.priceUsd - a.priceUsd / (1 + a.change24h / 100)), 0);
-    const before = now - usd;
-    return { usd, pct: before > 0 ? (usd / before) * 100 : 0 };
-  }, [allCombinedAssets]);
+  const nimAsset = assets.find((a) => a.symbol === 'NIM');
+  const nimBalance = nimAsset ? nimAsset.userBalance : wallet.nimiqBalanceLuna / 100000;
 
   const handleSwapSuccess = (
     fromAsset: Asset,
@@ -410,7 +403,7 @@ export default function App() {
               <HeroBalanceCard
                 wallet={wallet}
                 totalBalanceUsd={totalPortfolioValueUsd}
-                change24h={portfolioChange24h}
+                nimBalance={nimBalance}
                 onOpenReceive={() => setIsReceiveOpen(true)}
                 onOpenSend={() => setIsSendOpen(true)}
                 onOpenSwap={() => {
