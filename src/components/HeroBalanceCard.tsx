@@ -23,65 +23,76 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   onRefresh,
   isRefreshing,
 }) => {
-  const balanceText = `$${totalBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const [whole, cents] = totalBalanceUsd
+    .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .split('.');
+  const size = whole.length > 9 ? 'text-[34px]' : whole.length > 6 ? 'text-[40px]' : 'text-[46px]';
+  const walletLabel = wallet.nimiqAddress
+    ? `${wallet.nimiqAddress.slice(0, 9)}…`
+    : wallet.evmAddress
+      ? `${wallet.evmAddress.slice(0, 6)}…${wallet.evmAddress.slice(-4)}`
+      : 'Wallet 1';
+
+  const actions = [
+    { label: 'Receive', icon: ArrowDownLeft, onClick: onOpenReceive },
+    { label: 'Swap', icon: Plus, onClick: onOpenSwap },
+    { label: 'Send', icon: ArrowUpRight, onClick: onOpenSend },
+  ];
+
   return (
-    <div className="mx-4 mt-3 mb-4 rounded-[36px] bg-[#1C1C1E] text-white shadow-xl overflow-hidden flex flex-col justify-between min-h-[33vh] max-h-[380px] px-5 pt-7 pb-6">
-      {/* Wallet Dropdown Selector */}
-      <div className="flex justify-center">
+    <div className="relative mx-4 mt-3 mb-5 rounded-[32px] bg-[#1C1C1E] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.55)] overflow-hidden min-h-[30vh] flex flex-col px-6 pt-5 pb-6">
+      {/* Soft top highlight for depth */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/[0.06] to-transparent" />
+
+      {/* Wallet selector */}
+      <div className="relative flex justify-center">
         <button
           onClick={onOpenWalletDetails}
-          className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-white/10 transition-colors"
         >
-          <span>{wallet.nimiqAddress ? `${wallet.nimiqAddress.slice(0, 6)}...` : wallet.evmAddress ? `${wallet.evmAddress.slice(0, 6)}...${wallet.evmAddress.slice(-4)}` : 'Wallet 1'}</span>
-          <ChevronDown className="w-3.5 h-3.5" />
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span>{walletLabel}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
       </div>
 
-      {/* Big Hero Balance */}
-      <div className="text-center flex-1 flex flex-col items-center justify-center py-3">
-        <h1 className={`${balanceText.length > 11 ? 'text-[38px]' : balanceText.length > 9 ? 'text-[44px]' : 'text-[52px]'} leading-none font-bold tracking-tight text-white`}>
-          {balanceText}
-        </h1>
-        <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-slate-400 font-medium">
+      {/* Balance */}
+      <div className="relative flex-1 flex flex-col items-center justify-center pt-5 pb-7">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+          <span>Total balance</span>
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            title="Refresh on-chain balances"
-            className="p-1 -m-1 hover:text-slate-300 transition-colors"
+            title="Refresh balances"
+            aria-label="Refresh balances"
+            className="p-1 -m-1 text-slate-500 hover:text-slate-300 transition-colors"
           >
-            <RotateCcw className={`w-3.5 h-3.5 text-slate-500 hover:text-slate-300 transition-transform ${isRefreshing ? 'animate-spin text-amber-400' : ''}`} />
+            <RotateCcw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-omnim-gold' : ''}`} />
           </button>
         </div>
+        <h1 className={`${size} mt-2 font-semibold tracking-tight leading-none tabular-nums`}>
+          <span className="text-slate-400 font-medium mr-0.5">$</span>
+          {whole}
+          <span className="text-slate-500">.{cents}</span>
+        </h1>
       </div>
 
-      {/* Action Buttons Row */}
-      <div className="flex items-center justify-center gap-4">
-        {/* Receive Pill Button */}
-        <button
-          onClick={onOpenReceive}
-          className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-95 text-white text-sm font-semibold transition-all shadow-sm"
-        >
-          <ArrowDownLeft className="w-4 h-4 stroke-[2]" />
-          <span>Receive</span>
-        </button>
-
-        {/* Central Swap Plus Button */}
-        <button
-          onClick={onOpenSwap}
-          title="Swap Assets"
-          className="w-14 h-14 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-90 text-white flex items-center justify-center text-xl transition-all shadow-sm"
-        >
-          <Plus className="w-6 h-6 stroke-[2.5]" />
-        </button>
-
-        {/* Send Pill Button */}
-        <button
-          onClick={onOpenSend}
-          className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-full bg-[#2C2C2E] hover:bg-[#38383A] active:scale-95 text-white text-sm font-semibold transition-all shadow-sm"
-        >
-          <ArrowUpRight className="w-4 h-4 stroke-[2]" />
-          <span>Send</span>
-        </button>
+      {/* Actions: three equal columns */}
+      <div className="relative grid grid-cols-3 gap-3 mt-1">
+        {actions.map(({ label, icon: Icon, onClick }) => (
+          <button key={label} onClick={onClick} className="group flex flex-col items-center gap-2 active:scale-95 transition-transform">
+            <span
+              className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-colors ${
+                label === 'Swap'
+                  ? 'bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark text-black'
+                  : 'bg-white/[0.08] text-white group-hover:bg-white/[0.14]'
+              }`}
+            >
+              <Icon className="w-5 h-5" strokeWidth={label === 'Swap' ? 2.5 : 2} />
+            </span>
+            <span className="text-xs font-medium text-slate-300">{label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
