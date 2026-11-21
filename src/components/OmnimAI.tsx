@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
+import OmnimBot from './OmnimBot';
 import { ArrowUp, X, Sparkles, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Msg {
@@ -16,17 +17,20 @@ interface RankedItem {
 }
 
 const SUGGESTIONS = [
-  'Which stock looks strongest right now?',
+  'What looks good to buy right now?',
   'Compare NVIDIA and Tesla',
-  'Is gold a good hedge at the moment?',
-  'What are the biggest risks in my portfolio style?',
+  'Should I buy gold now or wait?',
+  'Is it a good time to take profit on crypto?',
 ];
 
 const pct = (v: number | null) => (v === null ? '–' : `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`);
 
 /** Renders **bold** and line breaks from the model without pulling in a markdown library. */
 function renderText(text: string) {
-  return text.split('\n').map((line, i) => (
+  return text.split('\n').map((line, i) =>
+    line.trim() === 'NFA' ? (
+      <p key={i} className="mt-2"><span className="inline-block text-[10px] font-semibold tracking-wider text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">NFA</span></p>
+    ) : (
     <p key={i} className={line.trim() === '' ? 'h-2' : 'mb-1'}>
       {line.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, j) =>
         part.startsWith('*') && !part.startsWith('**') && part.endsWith('*') && part.length > 2 ? (
@@ -38,7 +42,8 @@ function renderText(text: string) {
         )
       )}
     </p>
-  ));
+    )
+  );
 }
 
 export default function OmnimAI() {
@@ -137,13 +142,9 @@ export default function OmnimAI() {
   const bottom = ranking.length > 3 ? ranking.slice(-2) : [];
 
   const Avatar = ({ size = 32 }: { size?: number }) => (
-    <img
-      src="/omnim-logo.png"
-      alt="OMNIM"
-      style={{ width: size, height: size }}
-      className="rounded-full object-cover bg-black ring-1 ring-black/5 shrink-0"
-      draggable={false}
-    />
+    <span className="shrink-0 rounded-full" style={{ width: size, height: size }}>
+      <OmnimBot size={size} animated={false} />
+    </span>
   );
 
   const RankRow = ({ r, up }: { r: RankedItem; up: boolean }) => (
@@ -177,18 +178,9 @@ export default function OmnimAI() {
           onPointerCancel={() => (drag.current = null)}
           aria-label="Open OMNIM AI (drag to move)"
           style={{ left: pos.x, top: pos.y, width: SIZE.w, height: SIZE.h, touchAction: 'none' }}
-          className="fixed z-40 rounded-full bg-black p-[3px] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.45)] ring-2 ring-omnim-gold/70 select-none cursor-grab active:cursor-grabbing active:scale-95 transition-transform"
+          className="fixed z-40 rounded-full shadow-[0_10px_26px_-8px_rgba(0,0,0,0.55)] select-none cursor-grab active:cursor-grabbing active:scale-95 transition-transform"
         >
-          <img src="/omnim-logo.png" alt="" draggable={false} className="w-full h-full rounded-full object-cover pointer-events-none" />
-          <span className="absolute -top-1.5 -right-1.5 w-[26px] h-[26px] rounded-full bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark flex items-center justify-center ring-2 ring-white">
-            <span className="omnim-eyes flex items-center gap-[4px] mt-[1px]">
-              {[0, 1].map((k) => (
-                <span key={k} className="omnim-eye relative block w-[6px] h-[8px] rounded-[45%] bg-black">
-                  <span className="absolute top-[1px] right-[1px] w-[2px] h-[2px] rounded-full bg-white" />
-                </span>
-              ))}
-            </span>
-          </span>
+          <OmnimBot size={SIZE.w} />
         </button>
       )}
 
@@ -228,7 +220,7 @@ export default function OmnimAI() {
                   <div className="flex gap-2.5">
                     <Avatar size={28} />
                     <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-md px-3.5 py-2.5 text-sm text-slate-700 leading-relaxed">
-                      Hi! Ask me about any stock, gold or crypto in OMNIM. I answer from real daily price history (Yahoo Finance, CoinGecko), not guesses.
+                      Hey 👋 I'm OMNIM AI. Ask me anything about the stocks, gold or crypto in OMNIM, like whether now looks like a time to buy, hold or wait. I go by real price history, not hype.
                     </div>
                   </div>
 
@@ -325,7 +317,7 @@ export default function OmnimAI() {
                 </button>
               </form>
               <div className="text-[10px] text-slate-400 text-center mt-2">
-                Not financial advice. Past performance doesn't predict future results.
+                NFA · Not financial advice. Past results don't guarantee future ones.
               </div>
             </div>
           </div>
