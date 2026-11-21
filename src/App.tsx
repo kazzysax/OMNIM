@@ -4,6 +4,7 @@ import { INITIAL_ASSETS } from './config/assets';
 import { connectDualWallet } from './services/nimiqWallet';
 import { discoverNewTokens } from './services/tokenDiscovery';
 import { fetchLivePrices } from './services/prices';
+import OmnimAI from './components/OmnimAI';
 import { fetchChainBalances } from './services/balances';
 import { HeroBalanceCard } from './components/HeroBalanceCard';
 import { PortfolioSection } from './components/PortfolioSection';
@@ -505,6 +506,8 @@ export default function App() {
         }}
         wallet={wallet}
       />
+
+      <OmnimAI />
     </div>
   );
 }
