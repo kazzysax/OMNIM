@@ -1,5 +1,4 @@
 import React from 'react';
-import { Bell } from 'lucide-react';
 
 interface HeaderProps {
   onOpenWalletDetails?: () => void;
@@ -20,12 +19,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenWalletDetails }) => {
         />
       </div>
 
-      {/* Right: Clean Bell Icon */}
-      <button 
-        className="w-10 h-10 rounded-full bg-[#2C2C2E] hover:bg-[#3A3A3C] active:scale-95 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
-      >
-        <Bell className="w-4 h-4 stroke-[2]" />
-      </button>
     </header>
   );
 };
