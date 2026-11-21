@@ -75,15 +75,9 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   // Mini Sparkline SVG Generator
   const renderSparkline = (data?: number[], change24h: number = 0, width = 54, height = 22) => {
     const isPositive = change24h >= 0;
-    let pointsData = data && data.length >= 2 ? [...data] : [];
-
-    if (pointsData.length < 2) {
-      if (isPositive) {
-        pointsData = [10, 11, 10.5, 12, 11.8, 13, 14];
-      } else {
-        pointsData = [14, 13, 13.5, 12, 12.2, 11, 10];
-      }
-    }
+    // No history yet: draw nothing rather than an invented trend line.
+    if (!data || data.length < 2) return null;
+    const pointsData = [...data];
 
     const min = Math.min(...pointsData);
     const max = Math.max(...pointsData);
@@ -212,7 +206,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
               {renderChainBadge(asset)}
               {asset.hasSwapLiquidity === false && (
                 <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-300 font-semibold tracking-tight">
-                  Low Liquidity
+                  Swaps unavailable
                 </span>
               )}
             </div>

@@ -21,6 +21,12 @@ export interface Asset {
   sparkline?: number[];
   hasSwapLiquidity?: boolean;
   liquidityNote?: string;
+  /** Token can be sold but not bought through the current routers. */
+  sellOnly?: boolean;
+  /** Where the live price comes from; `snapshot` means the bundled fallback value is shown. */
+  priceSource?: 'coingecko' | 'relay' | 'snapshot';
+  /** Result of scripts/verify-assets.mjs: full = buy/sell/depth checked, buy-only = buy checked. */
+  verification?: 'full' | 'buy-only' | 'sell-only';
 }
 
 export interface RouteStep {
@@ -49,6 +55,14 @@ export interface SwapQuote {
   relayTxData?: any;
   fromAmountUsd?: number;
   toAmountUsd?: number;
+  /** Router that produced this quote, e.g. "Relay" or "Li.Fi (sushiswap)". */
+  provider: string;
+  /** Epoch ms when the quote was fetched; quotes go stale after QUOTE_TTL_MS. */
+  quotedAt: number;
+  /** Total value lost to fees, gas and slippage, as % of the amount sent (from router USD values). */
+  totalCostPct: number;
+  /** Soft warning shown to the user (high but acceptable cost, etc.). */
+  warning?: string;
 }
 
 export interface WalletState {

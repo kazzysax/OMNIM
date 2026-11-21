@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Asset, SwapQuote, WalletState } from '../types';
-import { getSwapQuote } from '../services/relay';
-import { executeEvmTransaction, waitForEvmReceipt, executeNimTransfer } from '../services/nimiqWallet';
+import { getSwapQuote, QUOTE_TTL_MS } from '../services/routing';
+import { executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
 import { AssetSelectorModal } from './AssetSelectorModal';
 import { OmnimLogoAnimation } from './OmnimLogoAnimation';
 import {
@@ -38,8 +38,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   wallet,
   onSwapSuccess,
 }) => {
-  const defaultFrom = initialFromAsset || assets.find((a) => a.symbol === 'POL') || assets.find((a) => a.symbol === 'USDC') || assets[0];
-  const defaultTo = initialToAsset || assets.find((a) => a.symbol === 'NIM') || assets.find((a) => a.symbol === 'bNVDA') || assets[1];
+  const defaultFrom = initialFromAsset || assets.find((a) => a.id === 'usdc-polygon') || assets[0];
+  const defaultTo = initialToAsset || assets.find((a) => a.id === 'xaut-bnb') || assets[1];
 
   const [fromAsset, setFromAsset] = useState<Asset>(defaultFrom);
   const [toAsset, setToAsset] = useState<Asset>(defaultTo);
@@ -54,11 +54,26 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [executionStatusText, setExecutionStatusText] = useState<string>('');
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+  const quoteRef = useRef<SwapQuote | null>(null);
+  quoteRef.current = quote;
 
   useEffect(() => {
     if (initialFromAsset) setFromAsset(initialFromAsset);
     if (initialToAsset) setToAsset(initialToAsset);
   }, [initialFromAsset, initialToAsset]);
+
+  // Keep the quote fresh while the sheet is open (prices and gas move).
+  useEffect(() => {
+    if (!isOpen || isExecuting) return;
+    // Li.Fi quotes are not auto-refreshed (free tier is ~75 requests / 2h); they re-quote on confirm if stale.
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible' && quoteRef.current && !quoteRef.current.provider.startsWith('Li.Fi')) {
+        setRefreshTick((t) => t + 1);
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [isOpen, isExecuting]);
 
   useEffect(() => {
     let active = true;
@@ -85,7 +100,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       return;
     }
 
-    setIsLoadingQuote(true);
+    if (refreshTick === 0 || !quote) setIsLoadingQuote(true);
     setErrorMsg(null);
 
     const debounceTimer = setTimeout(async () => {
@@ -116,7 +131,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       active = false;
       clearTimeout(debounceTimer);
     };
-  }, [fromAsset, toAsset, fromAmount, wallet.evmAddress]);
+  }, [fromAsset, toAsset, fromAmount, wallet.evmAddress, refreshTick]);
 
   if (!isOpen) return null;
 
@@ -154,6 +169,22 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const handleExecuteSwap = async () => {
     if (!quote || parsedFromAmount <= 0) return;
 
+    // Never sign a stale quote: refresh first and make the user confirm the new numbers.
+    if (Date.now() - quote.quotedAt > QUOTE_TTL_MS) {
+      setIsLoadingQuote(true);
+      try {
+        const fresh = await getSwapQuote(fromAsset, toAsset, fromAmount, wallet.evmAddress || undefined);
+        setQuote(fresh);
+        setErrorMsg('Quote refreshed with current prices. Review it and tap swap again.');
+      } catch (e: any) {
+        setQuote(null);
+        setErrorMsg(e.message || 'Could not refresh the quote.');
+      } finally {
+        setIsLoadingQuote(false);
+      }
+      return;
+    }
+
     setIsExecuting(true);
     setErrorMsg(null);
     setIsSuccess(false);
@@ -161,32 +192,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     try {
       let lastTxHash: string | undefined;
 
-      // CASE 1: SWAPPING FROM NIM (Origin is Nimiq L1)
-      if (fromAsset.symbol === 'NIM') {
-        setExecutionStatusText('Step 1/2: Please confirm NIM transaction in your wallet...');
-        const valueInLuna = Math.round(parsedFromAmount * 100000);
-        const nimBridgeAddress = 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000';
-        try {
-          const nimHash = await executeNimTransfer({
-            recipient: nimBridgeAddress,
-            valueInLuna,
-            feeInLuna: 1000,
-          });
-          lastTxHash = nimHash;
-        } catch (nimErr: any) {
-          throw new Error(nimErr.message || 'NIM transaction was rejected in Nimiq Pay.');
-        }
-
-        setExecutionStatusText(`Step 2/2: Confirming Fastspot atomic route to ${toAsset.symbol} on ${toAsset.chain}...`);
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-      // CASE 2: SWAPPING FROM EVM ASSET (Origin is Polygon, BSC, Base, Arbitrum, etc.)
-      else {
+      // Origin is an EVM chain (Polygon, BNB Chain, Base, Arbitrum, ...)
+      {
         if (!quote.relayTxData || !Array.isArray(quote.relayTxData) || quote.relayTxData.length === 0) {
           throw new Error('No executable transaction route returned for this token pair.');
         }
 
-        const totalSteps = quote.relayTxData.length + (toAsset.symbol === 'NIM' ? 1 : 0);
+        const totalSteps = quote.relayTxData.length;
 
         for (let i = 0; i < quote.relayTxData.length; i++) {
           const step = quote.relayTxData[i];
@@ -212,7 +224,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   await waitForEvmReceipt(txHash, fromAsset.chainId);
 
                   // 2. If cross-chain, show relay progress
-                  if (fromAsset.chainId !== toAsset.chainId && toAsset.symbol !== 'NIM') {
+                  if (fromAsset.chainId !== toAsset.chainId) {
                     setExecutionStatusText(`Confirmed on ${fromAsset.chain}! Relaying cross-chain to ${toAsset.chain}...`);
                     await new Promise((resolve) => setTimeout(resolve, 4000));
                   }
@@ -222,19 +234,15 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           }
         }
 
-        // If destination is NIM, finalize atomic settlement into user's Nimiq address
-        if (toAsset.symbol === 'NIM') {
-          const nimShort = wallet.nimiqAddress
-            ? `${wallet.nimiqAddress.slice(0, 8)}...${wallet.nimiqAddress.slice(-6)}`
-            : 'Nimiq Wallet';
-          setExecutionStatusText(`Step ${totalSteps}/${totalSteps}: Settling Fastspot atomic route to ${nimShort}...`);
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
       }
 
       setIsSuccess(true);
       confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
-      setExecutionStatusText(`Swap settled! Received ${quote.toAmount} ${toAsset.symbol}`);
+      setExecutionStatusText(
+        fromAsset.chainId === toAsset.chainId
+          ? `Swap confirmed. About ${quote.toAmount} ${toAsset.symbol} received.`
+          : `Submitted. About ${quote.toAmount} ${toAsset.symbol} will arrive on ${toAsset.chain} shortly.`
+      );
 
       onSwapSuccess(
         fromAsset,
@@ -265,9 +273,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
             <div className="flex items-center gap-1.5">
               <h3 className="text-base font-bold text-slate-900">Mainnet Swap</h3>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                {toAsset.symbol === 'NIM' || fromAsset.symbol === 'NIM'
-                  ? 'Fastspot Route'
-                  : 'Relay Link'}
+                {quote?.provider.split(' ')[0] ?? 'Best route'}
               </span>
             </div>
             <button
@@ -330,7 +336,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </span>
                 {fromAsset.hasSwapLiquidity === false && (
                   <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-300">
-                    Low Liquidity
+                    Swaps unavailable
                   </span>
                 )}
               </div>
@@ -397,7 +403,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </span>
                 {toAsset.hasSwapLiquidity === false && (
                   <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold border border-amber-300">
-                    Low Liquidity
+                    Swaps unavailable
                   </span>
                 )}
               </div>
@@ -408,11 +414,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 <div className="flex items-center justify-between text-slate-600 font-medium">
                   <span>Route</span>
                   <span className="flex items-center gap-1 font-mono text-[10px] text-emerald-700 font-semibold">
-                    {fromAsset.symbol === 'NIM'
-                      ? `NIM ➔ Fastspot ➔ ${toAsset.symbol}`
-                      : toAsset.symbol === 'NIM'
-                        ? `${fromAsset.symbol} ➔ Fastspot ➔ NIM`
-                        : `${fromAsset.chain} ➔ ${toAsset.chain}`}
+                    {quote.provider} · {fromAsset.chain === toAsset.chain ? fromAsset.chain : `${fromAsset.chain} ➔ ${toAsset.chain}`}
                   </span>
                 </div>
                 {toAsset.symbol === 'NIM' && wallet.nimiqAddress && (
@@ -430,17 +432,18 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span>Price Impact</span>
-                  <span className={`font-mono font-medium ${quote.priceImpact > 3 ? 'text-amber-600' : 'text-slate-700'}`}>
-                    {quote.priceImpact < 0.01 ? '< 0.01%' : `${quote.priceImpact.toFixed(2)}%`}
+                  <span>Total cost (fees + slippage)</span>
+                  <span className={`font-mono font-medium ${quote.totalCostPct > 1.5 ? 'text-amber-600' : 'text-slate-700'}`}>
+                    {quote.totalCostPct < 0.01 ? '< 0.01%' : `${quote.totalCostPct.toFixed(2)}%`}
                   </span>
                 </div>
-                {quote.relayFeeUsd > 0 && (
+                {quote.relayFeeUsd + quote.estimatedGasUsd > 0 && (
                   <div className="flex items-center justify-between">
-                    <span>Relayer / Bridge Gas</span>
-                    <span className="font-mono text-slate-700">≈ ${quote.relayFeeUsd.toFixed(3)}</span>
+                    <span>Network + router fees</span>
+                    <span className="font-mono text-slate-700">≈ ${(quote.relayFeeUsd + quote.estimatedGasUsd).toFixed(3)}</span>
                   </div>
                 )}
+                {quote.warning && <div className="text-amber-600 font-medium">⚠ {quote.warning}</div>}
                 <div className="flex items-center justify-between">
                   <span>Min. Received</span>
                   <span className="font-mono text-slate-700">{quote.minReceived} {toAsset.symbol}</span>
@@ -490,7 +493,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 }`}
             >
               {fromAsset.hasSwapLiquidity === false || toAsset.hasSwapLiquidity === false
-                ? 'Low Liquidity (Swap Unavailable)'
+                ? 'Swap unavailable'
                 : isInsufficient
                   ? 'Insufficient Balance'
                   : isExecuting

@@ -1,12 +1,15 @@
 {
   "name": "omnim-mini-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "verify:assets": "node scripts/verify-assets.mjs",
+    "verify:assets:onchain": "node scripts/verify-assets.mjs --checks none"
   },
   "dependencies": {
     "@nimiq/mini-app-sdk": "^0.2.5",

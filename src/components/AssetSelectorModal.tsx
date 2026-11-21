@@ -141,7 +141,7 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                       </span>
                       {asset.hasSwapLiquidity === false && (
                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300 font-semibold tracking-tight">
-                          Low Liquidity
+                          Swaps unavailable
                         </span>
                       )}
                     </div>

@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Asset, WalletState, TransactionRecord } from './types';
 import { INITIAL_ASSETS } from './config/assets';
-import { connectDualWallet, fetchRealEvmBalance } from './services/nimiqWallet';
+import { connectDualWallet } from './services/nimiqWallet';
 import { discoverNewTokens } from './services/tokenDiscovery';
+import { fetchLivePrices } from './services/prices';
+import { fetchChainBalances } from './services/balances';
 import { HeroBalanceCard } from './components/HeroBalanceCard';
 import { PortfolioSection } from './components/PortfolioSection';
 import { TransactionHistoryView } from './components/TransactionHistoryView';
@@ -37,48 +39,13 @@ function getInitialTransactions(): TransactionRecord[] {
     const saved = localStorage.getItem('omnim_tx_history');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Sanitize any legacy two-step entries from earlier versions
-        return parsed.map((tx: TransactionRecord) => ({
-          ...tx,
-          status: 'confirmed',
-          actionUrl: undefined,
-          actionLabel: undefined,
-          toSymbol: tx.toSymbol === 'Polygon USDC' ? 'NIM' : tx.toSymbol,
-          note: tx.note?.includes('Fastspot')
-            ? 'Swapped on Polygon Mainnet to native NIM in your Nimiq wallet'
-            : tx.note,
-        }));
+      if (Array.isArray(parsed)) {
+        // Drop the demo entries that older versions seeded into every new wallet.
+        return parsed.filter((tx: TransactionRecord) => !String(tx.id).startsWith('tx-seed-'));
       }
     }
   } catch { }
-
-  return [
-    {
-      id: 'tx-seed-1',
-      type: 'swap',
-      fromSymbol: 'POL',
-      toSymbol: 'NIM',
-      fromAmount: 5,
-      toAmount: 1850.5,
-      timestamp: Date.now() - 3600000 * 1.5,
-      status: 'confirmed',
-      chain: 'Polygon Mainnet',
-      explorerUrl: 'https://polygonscan.com',
-      note: 'Swapped on Polygon Mainnet to native NIM in your Nimiq wallet',
-    },
-    {
-      id: 'tx-seed-2',
-      type: 'send',
-      fromSymbol: 'POL',
-      fromAmount: 2,
-      timestamp: Date.now() - 3600000 * 3,
-      status: 'confirmed',
-      chain: 'Polygon Mainnet',
-      explorerUrl: 'https://polygonscan.com',
-      note: 'Transfer on Polygon Mainnet to 0xbd84...73dd',
-    },
-  ];
+  return [];
 }
 
 export default function App() {
@@ -113,7 +80,9 @@ export default function App() {
 
   const isRefreshingRef = useRef(false);
   const lastPriceFetchRef = useRef<number>(0);
-  const cachedPricesRef = useRef<any>(null);
+  const lastFullPriceFetchRef = useRef<number>(0);
+  const assetsRef = useRef<Asset[]>([]);
+  assetsRef.current = assets;
   const lastDiscoveryRef = useRef<number>(0);
 
   useEffect(() => {
@@ -165,160 +134,57 @@ export default function App() {
       const state = await connectDualWallet();
       setWallet(state);
 
-      // 1. Price cache check (fetch only every 45 seconds to avoid CoinGecko 429 rate limit)
-      let currentPrices: any = cachedPricesRef.current;
-      const now = Date.now();
-      if (!currentPrices || now - lastPriceFetchRef.current > 45000) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2500);
-          const priceRes = await fetch(
-            'https://api.coingecko.com/api/v3/simple/price?ids=nimiq,tether,ethereum,binancecoin,matic-network,polygon-ecosystem-token,bitcoin,avalanche-2,arbitrum,optimism&vs_currencies=usd&include_24hr_change=true',
-            { signal: controller.signal }
+      // 1. Live prices: held assets every 2 min, the whole catalog every 5 min.
+      const nowMs = Date.now();
+      const catalog = assetsRef.current;
+      const fullDue = nowMs - lastFullPriceFetchRef.current > 300000;
+      const heldDue = nowMs - lastPriceFetchRef.current > 120000;
+      if (fullDue || heldDue) {
+        lastPriceFetchRef.current = nowMs;
+        if (fullDue) lastFullPriceFetchRef.current = nowMs;
+        const targets = fullDue ? catalog : catalog.filter((a) => a.userBalance > 0 || a.symbol === 'NIM');
+        const live = await fetchLivePrices(targets);
+        if (Object.keys(live).length > 0) {
+          setAssets((prev) =>
+            prev.map((a) => {
+              const p = live[a.id];
+              return p
+                ? { ...a, priceUsd: p.priceUsd, change24h: p.change24h, sparkline: p.sparkline ?? a.sparkline, priceSource: p.source }
+                : a;
+            })
           );
-          clearTimeout(timeoutId);
-          if (priceRes.ok) {
-            currentPrices = await priceRes.json();
-            cachedPricesRef.current = currentPrices;
-            lastPriceFetchRef.current = now;
-          }
-        } catch {
-          // Keep using existing cached prices
         }
       }
 
-      // 2. Update price and Nimiq balance on existing assets
-      setAssets((prevAssets) =>
-        prevAssets.map((asset) => {
-          let updatedPrice = asset.priceUsd;
-          let updatedChange = asset.change24h;
-
-          if (currentPrices) {
-            if (asset.symbol === 'NIM' && currentPrices.nimiq?.usd) {
-              updatedPrice = currentPrices.nimiq.usd;
-              if (typeof currentPrices.nimiq.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.nimiq.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'USDT' && currentPrices.tether?.usd) {
-              updatedPrice = currentPrices.tether.usd;
-              if (typeof currentPrices.tether.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.tether.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'ETH' && currentPrices.ethereum?.usd) {
-              updatedPrice = currentPrices.ethereum.usd;
-              if (typeof currentPrices.ethereum.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.ethereum.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'BNB' && currentPrices.binancecoin?.usd) {
-              updatedPrice = currentPrices.binancecoin.usd;
-              if (typeof currentPrices.binancecoin.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.binancecoin.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'POL') {
-              const polPriceObj = currentPrices['polygon-ecosystem-token'] || currentPrices['matic-network'];
-              if (polPriceObj?.usd) {
-                updatedPrice = polPriceObj.usd;
-                if (typeof polPriceObj.usd_24h_change === 'number') {
-                  updatedChange = parseFloat(polPriceObj.usd_24h_change.toFixed(2));
-                }
-              }
-            } else if (asset.symbol === 'WBTC' && currentPrices.bitcoin?.usd) {
-              updatedPrice = currentPrices.bitcoin.usd;
-              if (typeof currentPrices.bitcoin.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.bitcoin.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'AVAX' && currentPrices['avalanche-2']?.usd) {
-              updatedPrice = currentPrices['avalanche-2'].usd;
-              if (typeof currentPrices['avalanche-2'].usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices['avalanche-2'].usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'ARB' && currentPrices.arbitrum?.usd) {
-              updatedPrice = currentPrices.arbitrum.usd;
-              if (typeof currentPrices.arbitrum.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.arbitrum.usd_24h_change.toFixed(2));
-              }
-            } else if (asset.symbol === 'OP' && currentPrices.optimism?.usd) {
-              updatedPrice = currentPrices.optimism.usd;
-              if (typeof currentPrices.optimism.usd_24h_change === 'number') {
-                updatedChange = parseFloat(currentPrices.optimism.usd_24h_change.toFixed(2));
-              }
-            }
-          }
-
-          let balance = asset.userBalance;
-          if (asset.symbol === 'NIM') {
-            if (state.nimiqAddress) {
-              const currentLuna = state.nimiqBalanceLuna / 100000;
-              // If currentLuna is > 0 or consensus confirmed, use it; otherwise preserve existing balance during transient network hiccups
-              balance = currentLuna > 0 ? currentLuna : (asset.userBalance > 0 && !state.isConsensusEstablished ? asset.userBalance : currentLuna);
-            } else {
-              balance = 0;
-            }
-          }
-
-          return {
-            ...asset,
-            priceUsd: updatedPrice,
-            change24h: updatedChange,
-            userBalance: balance,
-          };
+      // 2. Native NIM balance
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.symbol !== 'NIM') return asset;
+          if (!state.nimiqAddress) return { ...asset, userBalance: 0 };
+          const currentNim = state.nimiqBalanceLuna / 100000;
+          // Keep the last known balance through transient network hiccups until consensus is confirmed.
+          const balance = currentNim > 0 ? currentNim : asset.userBalance > 0 && !state.isConsensusEstablished ? asset.userBalance : currentNim;
+          return { ...asset, userBalance: balance };
         })
       );
 
-      // 3. Resilient EVM Multi-Chain balance query in controlled batches
+      // 3. EVM balances: one batched Multicall3 request per chain.
       if (!state.evmAddress) {
-        // If EVM wallet is disconnected, all EVM asset balances must be 0
-        setAssets((prev) =>
-          prev.map((asset) => (asset.chainId > 0 ? { ...asset, userBalance: 0 } : asset))
-        );
+        setAssets((prev) => prev.map((asset) => (asset.chainId > 0 ? { ...asset, userBalance: 0 } : asset)));
       } else {
-        const chunkSize = 6;
-        const evmBalances: { id: string; bal: number | null }[] = [];
-
-        for (let i = 0; i < INITIAL_ASSETS.length; i += chunkSize) {
-          const chunk = INITIAL_ASSETS.slice(i, i + chunkSize);
-          const chunkResults = await Promise.all(
-            chunk.map(async (asset) => {
-              if (asset.chainId > 0 && asset.contractAddress) {
-                const bal = await fetchRealEvmBalance(
-                  asset.contractAddress,
-                  state.evmAddress!,
-                  asset.decimals,
-                  asset.chainId
-                );
-                return { id: asset.id, bal };
-              }
-              return { id: asset.id, bal: 0 };
-            })
-          );
-          evmBalances.push(...chunkResults);
-        }
-
-        setAssets((prev) => {
-          const updated = prev.map((asset) => {
-            const found = evmBalances.find((e) => e.id === asset.id);
-            if (found && asset.chainId > 0) {
-              // Only overwrite if a valid numeric balance was obtained
-              // If bal is null (temporary RPC network timeout), preserve previous userBalance!
-              if (found.bal !== null && typeof found.bal === 'number') {
-                return { ...asset, userBalance: found.bal };
-              }
-              return asset;
-            }
-            return asset;
-          });
-
-          // Cache non-zero balances in localStorage scoped to this EVM address
-          try {
-            const balanceMap: Record<string, number> = {};
-            updated.forEach((a) => {
-              if (a.userBalance > 0) balanceMap[a.id] = a.userBalance;
-            });
-            localStorage.setItem(`omnim_asset_balances_${state.evmAddress!.toLowerCase()}`, JSON.stringify(balanceMap));
-          } catch { }
-
-          return updated;
-        });
+        const owner = state.evmAddress;
+        const evmAssets = INITIAL_ASSETS.filter((a) => a.chainId > 0 && a.contractAddress);
+        const chainIds = Array.from(new Set(evmAssets.map((a) => a.chainId)));
+        const perChain = await Promise.all(
+          chainIds.map((chainId) =>
+            fetchChainBalances(chainId, owner, evmAssets.filter((a) => a.chainId === chainId))
+          )
+        );
+        // Assets missing from a result (failed call or RPC outage) keep their previous balance.
+        const balances: Record<string, number> = Object.assign({}, ...perChain.map((r) => r ?? {}));
+        setAssets((prev) =>
+          prev.map((asset) => (asset.id in balances ? { ...asset, userBalance: balances[asset.id] } : asset))
+        );
       }
 
       // 4. Auto-discover new tokens not in the predefined list (throttled to every 3 mins to avoid network congestion)
@@ -504,13 +370,12 @@ export default function App() {
   };
 
   const handleSelectAssetForSwap = (asset: Asset) => {
-    if (asset.symbol === 'NIM') {
-      setSwapFromAsset(asset);
-      setSwapToAsset(assets.find((a) => a.symbol === 'bTSLA'));
-    } else {
-      setSwapFromAsset(assets.find((a) => a.symbol === 'NIM'));
-      setSwapToAsset(asset);
-    }
+    // Pay with whatever the user holds the most of (else USDC on Polygon) and buy the tapped asset.
+    const swappable = assets.filter((a) => a.id !== asset.id && a.hasSwapLiquidity !== false);
+    const funded = [...swappable].sort((a, b) => b.userBalance * b.priceUsd - a.userBalance * a.priceUsd)[0];
+    const payWith = funded && funded.userBalance * funded.priceUsd > 1 ? funded : swappable.find((a) => a.id === 'usdc-polygon') ?? swappable[0];
+    setSwapFromAsset(payWith);
+    setSwapToAsset(asset.hasSwapLiquidity === false || asset.sellOnly ? undefined : asset);
     setIsSwapOpen(true);
   };
 

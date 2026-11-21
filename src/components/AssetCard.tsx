@@ -125,14 +125,14 @@ export const AssetCard: React.FC<AssetCardProps> = ({ asset, onSwapAsset, onView
               {asset.symbol}
             </span>
             {asset.isVerified && (
-              <ShieldCheck className="w-3.5 h-3.5 text-[#E5B887]" title="Verified Contract" />
+              <span title="Verified contract"><ShieldCheck className="w-3.5 h-3.5 text-[#E5B887]" /></span>
             )}
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-slate-400 font-medium">
               ${asset.priceUsd < 0.01 ? asset.priceUsd.toFixed(6) : asset.priceUsd.toFixed(2)}
             </span>
             {asset.hasSwapLiquidity === false && (
               <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold tracking-tight">
-                Low Liquidity
+                Swaps unavailable
               </span>
             )}
           </div>

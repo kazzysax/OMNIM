@@ -3,7 +3,6 @@ import { WalletState } from '../types';
 
 declare global {
   interface Window {
-    nimiq?: any;
     ethereum?: any;
   }
 }
@@ -77,11 +76,12 @@ export async function connectDualWallet(): Promise<WalletState> {
   } catch (err) {
     if (window.nimiq && typeof window.nimiq.listAccounts === 'function') {
       try {
-        const accounts = await window.nimiq.listAccounts();
-        if (accounts && accounts.length > 0) {
-          nimiqAddress = accounts[0];
+        const accounts: unknown = await window.nimiq.listAccounts();
+        if (Array.isArray(accounts) && accounts.length > 0) {
+          const account = accounts[0] as string;
+          nimiqAddress = account;
           if (typeof window.nimiq.getBalance === 'function') {
-            const bal = await window.nimiq.getBalance(nimiqAddress);
+            const bal: unknown = await window.nimiq.getBalance(account);
             if (typeof bal === 'number') {
               nimiqBalanceLuna = bal;
               lastKnownNimiqBalanceLuna = bal;
