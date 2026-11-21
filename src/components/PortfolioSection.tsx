@@ -1,3 +1,4 @@
+import AssetLogo from './AssetLogo';
 import React, { useState, useMemo } from 'react';
 import { Asset } from '../types';
 import { ChevronDown, ChevronUp, TrendingUp, TrendingDown } from 'lucide-react';
@@ -13,24 +14,7 @@ interface PortfolioSectionProps {
   onSelectAssetForSwap: (asset: Asset) => void;
 }
 
-const AssetIcon: React.FC<{ asset: Asset }> = ({ asset }) => {
-  const [failed, setFailed] = useState(false);
-  const showImage = asset.logoUrl && !failed;
-  return (
-    <div
-      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden border border-slate-100"
-      style={{ backgroundColor: showImage ? '#fff' : `${asset.color}22` }}
-    >
-      {showImage ? (
-        <img src={asset.logoUrl} alt="" className="w-full h-full object-contain" onError={() => setFailed(true)} />
-      ) : (
-        <span className="text-sm font-bold" style={{ color: asset.color }}>
-          {displayName(asset.name).charAt(0).toUpperCase()}
-        </span>
-      )}
-    </div>
-  );
-};
+const AssetIcon: React.FC<{ asset: Asset }> = ({ asset }) => <AssetLogo asset={asset} size={36} />;
 
 export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   assets,

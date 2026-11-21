@@ -1,3 +1,4 @@
+import AssetLogo from './AssetLogo';
 import React, { useState } from 'react';
 import { Asset } from '../types';
 import { X, ShieldCheck, Check } from 'lucide-react';
@@ -107,29 +108,7 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border border-slate-200/80 bg-white overflow-hidden p-1 shadow-sm"
-                    style={{ backgroundColor: `${asset.color}12` }}
-                  >
-                    {asset.logoUrl ? (
-                      <img
-                        src={asset.logoUrl}
-                        alt={asset.symbol}
-                        className="w-full h-full object-contain rounded-full"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                          const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <span 
-                      className="text-base items-center justify-center"
-                      style={{ display: asset.logoUrl ? 'none' : 'flex' }}
-                    >
-                      {asset.icon}
-                    </span>
-                  </div>
+                  <AssetLogo asset={asset} size={40} />
                   <div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-slate-900 text-sm">{asset.symbol}</span>

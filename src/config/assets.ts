@@ -87,7 +87,7 @@ const NIM: Asset = {
   contractAddress: 'NATIVE_NIM',
   decimals: 5, // 1 NIM = 100,000 Luna
   icon: '💛',
-  logoUrl: 'https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://nimiq.com&size=128',
+  logoUrl: '/logos/nim.png',
   color: '#E5B887',
   priceUsd: 0.0282,
   change24h: 0,

@@ -1,3 +1,4 @@
+import AssetLogo from './AssetLogo';
 import React, { useState } from 'react';
 import { Asset, WalletState } from '../types';
 import { executeNimTransfer, executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
@@ -167,11 +168,7 @@ export const SendModal: React.FC<SendModalProps> = ({
                 onClick={() => setIsSelectingAsset(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-900 font-bold text-xs shadow-sm"
               >
-                {selectedAsset.logoUrl ? (
-                  <img src={selectedAsset.logoUrl} alt={selectedAsset.symbol} className="w-4 h-4 object-contain rounded-full" />
-                ) : (
-                  <span>{selectedAsset.icon}</span>
-                )}
+                <AssetLogo asset={selectedAsset} size={20} />
                 <span>{selectedAsset.symbol}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>

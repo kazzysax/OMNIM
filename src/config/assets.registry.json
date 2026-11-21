@@ -11,7 +11,7 @@
     "priceUsd": 348.48,
     "icon": "📈",
     "color": "#B64ED9",
-    "logo": null,
+    "logo": "/logos/aaplb-bnb.png",
     "verification": "full"
   },
   {
@@ -26,7 +26,7 @@
     "priceUsd": 254.15,
     "icon": "📈",
     "color": "#D94ED7",
-    "logo": "https://assets.coingecko.com/coins/images/68604/standard/amznon_160x160.png",
+    "logo": "/logos/amznon-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -41,7 +41,7 @@
     "priceUsd": 157.16,
     "icon": "📈",
     "color": "#D44ED9",
-    "logo": "https://cdn.ondo.finance/tokens/logos/armon_160x160.png",
+    "logo": "/logos/armon-bnb.png",
     "verification": "full"
   },
   {
@@ -56,7 +56,7 @@
     "priceUsd": 119.45,
     "icon": "📈",
     "color": "#D9A44E",
-    "logo": "https://cdn.ondo.finance/tokens/logos/dison_160x160.png",
+    "logo": "/logos/dison-bnb.png",
     "verification": "full"
   },
   {
@@ -71,7 +71,7 @@
     "priceUsd": 34.49,
     "icon": "📈",
     "color": "#D94E4E",
-    "logo": "https://cdn.ondo.finance/tokens/logos/dramon_160x160.png",
+    "logo": "/logos/dramon-bnb.png",
     "verification": "full"
   },
   {
@@ -86,7 +86,7 @@
     "priceUsd": 31.55,
     "icon": "📈",
     "color": "#4ED9A8",
-    "logo": "https://cdn.ondo.finance/tokens/logos/fxion_160x160.png",
+    "logo": "/logos/fxion-bnb.png",
     "verification": "full"
   },
   {
@@ -101,7 +101,7 @@
     "priceUsd": 273.39,
     "icon": "📈",
     "color": "#4ED9C6",
-    "logo": "https://assets.coingecko.com/coins/images/68606/standard/googlon_160x160.png",
+    "logo": "/logos/googlon-bnb.png",
     "verification": "full"
   },
   {
@@ -116,7 +116,7 @@
     "priceUsd": 33.76,
     "icon": "📈",
     "color": "#4ED960",
-    "logo": "https://cdn.ondo.finance/tokens/logos/ibiton_160x160.png",
+    "logo": "/logos/ibiton-bnb.png",
     "verification": "full"
   },
   {
@@ -131,7 +131,7 @@
     "priceUsd": 572.16,
     "icon": "📈",
     "color": "#D94E88",
-    "logo": "https://assets.coingecko.com/coins/images/68645/standard/metaon_160x160.png",
+    "logo": "/logos/metaon-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -146,7 +146,7 @@
     "priceUsd": 500.26,
     "icon": "📈",
     "color": "#574ED9",
-    "logo": "https://assets.coingecko.com/coins/images/68625/standard/msfton_160x160.png",
+    "logo": "/logos/msfton-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -161,7 +161,7 @@
     "priceUsd": 80.61,
     "icon": "📈",
     "color": "#4E88D9",
-    "logo": "https://cdn.ondo.finance/tokens/logos/mstron_160x160.png",
+    "logo": "/logos/mstron-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -176,7 +176,7 @@
     "priceUsd": 130.45,
     "icon": "📈",
     "color": "#4ED9BB",
-    "logo": "https://assets.coingecko.com/coins/images/68623/standard/nvdaon_160x160.png",
+    "logo": "/logos/nvdaon-bnb.png",
     "verification": "full"
   },
   {
@@ -191,7 +191,7 @@
     "priceUsd": 625.45,
     "icon": "📈",
     "color": "#964ED9",
-    "logo": "https://assets.coingecko.com/coins/images/68654/standard/qqqon_160x160.png",
+    "logo": "/logos/qqqon-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -206,7 +206,7 @@
     "priceUsd": 107.14,
     "icon": "📈",
     "color": "#D94E8A",
-    "logo": "https://cdn.ondo.finance/tokens/logos/skhyon_160x160.png",
+    "logo": "/logos/skhyon-bnb.png",
     "verification": "full"
   },
   {
@@ -221,7 +221,7 @@
     "priceUsd": 37.6,
     "icon": "📈",
     "color": "#6C4ED9",
-    "logo": "https://assets.coingecko.com/coins/images/68651/standard/slvon_160x160.png",
+    "logo": "/logos/slvon-bnb.png",
     "verification": "full"
   },
   {
@@ -236,7 +236,7 @@
     "priceUsd": 644.04,
     "icon": "📈",
     "color": "#9AD94E",
-    "logo": "https://cdn.ondo.finance/tokens/logos/sndkon_160x160.png",
+    "logo": "/logos/sndkon-bnb.png",
     "verification": "full"
   },
   {
@@ -251,7 +251,7 @@
     "priceUsd": 130.78,
     "icon": "📈",
     "color": "#674ED9",
-    "logo": "https://cdn.ondo.finance/tokens/logos/spcxon_160x160.png",
+    "logo": "/logos/spcxon-bnb.png",
     "verification": "full"
   },
   {
@@ -266,7 +266,7 @@
     "priceUsd": 707.24,
     "icon": "📈",
     "color": "#4ED9D2",
-    "logo": "https://assets.coingecko.com/coins/images/68655/standard/spyon_160x160.png",
+    "logo": "/logos/spyon-bnb.png",
     "verification": "full"
   },
   {
@@ -281,7 +281,7 @@
     "priceUsd": 101.23,
     "icon": "📈",
     "color": "#4E98D9",
-    "logo": "https://cdn.ondo.finance/tokens/logos/strcon_160x160.png",
+    "logo": "/logos/strcon-bnb.png",
     "verification": "full"
   },
   {
@@ -296,7 +296,7 @@
     "priceUsd": 354.54,
     "icon": "📈",
     "color": "#AB4ED9",
-    "logo": "https://assets.coingecko.com/coins/images/68628/standard/tslaon_160x160.png",
+    "logo": "/logos/tslaon-bnb.png",
     "verification": "buy-only"
   },
   {
@@ -311,7 +311,7 @@
     "priceUsd": 3540.76,
     "icon": "🥇",
     "color": "#A6D94E",
-    "logo": "https://static.debank.com/image/eth_token/logo_url/0x68749665ff8d2d112fa859aa293f07a622782f38/a100487c27e4e6e5557ef770230c7f8b.png",
+    "logo": "/logos/xaut-bnb.png",
     "verification": "full"
   },
   {
@@ -326,7 +326,7 @@
     "priceUsd": 3488.52,
     "icon": "🥇",
     "color": "#9D4ED9",
-    "logo": null,
+    "logo": "/logos/paxg-arbitrum.png",
     "verification": "full"
   },
   {
@@ -341,7 +341,7 @@
     "priceUsd": 1.31,
     "icon": "🇬🇧",
     "color": "#6CD94E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x27f6c8289550fce67f6b50bed1f519966afe5287/7187f36f21b7a512c3a3e56788b8a69b.png",
+    "logo": "/logos/tgbp-bnb.png",
     "verification": "full"
   },
   {
@@ -356,7 +356,7 @@
     "priceUsd": 0.680129,
     "icon": "🇦🇺",
     "color": "#4E75D9",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b/f3a524932c6f3e1fcf68411609e82590.png",
+    "logo": "/logos/audf-polygon.png",
     "verification": "full"
   },
   {
@@ -371,7 +371,7 @@
     "priceUsd": 0.163841,
     "icon": "🇧🇷",
     "color": "#D94E98",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc/f46d79b93c66d1d718eafe121e429ad2.png",
+    "logo": "/logos/brz-polygon.png",
     "verification": "full"
   },
   {
@@ -386,7 +386,7 @@
     "priceUsd": 1.1,
     "icon": "🇪🇺",
     "color": "#4ED960",
-    "logo": "https://static.debank.com/image/base_token/logo_url/0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42/d780f677e5a8c6a28cca43f5a091e8a7.png",
+    "logo": "/logos/eurc-base.png",
     "verification": "full"
   },
   {
@@ -401,7 +401,7 @@
     "priceUsd": 1.1,
     "icon": "🇪🇺",
     "color": "#AB4ED9",
-    "logo": "https://superfluid-finance.github.io/tokenlist/icons/eurs.png",
+    "logo": "/logos/eurs-polygon.png",
     "verification": "full"
   },
   {
@@ -416,7 +416,7 @@
     "priceUsd": 1.09,
     "icon": "🇪🇺",
     "color": "#D9D74E",
-    "logo": "https://docs.monerium.com/img/tokens/eure.svg",
+    "logo": "/logos/eure-polygon.svg",
     "verification": "full"
   },
   {
@@ -431,7 +431,7 @@
     "priceUsd": 0.006287,
     "icon": "🇯🇵",
     "color": "#57D94E",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/0xe7c3d8c9a439fede00d2600032d5db0be71c3c29/ab824c2d4ab77db9adc3126c81ccd4cc.png",
+    "logo": "/logos/jpyc-polygon.png",
     "verification": "full"
   },
   {
@@ -446,7 +446,7 @@
     "priceUsd": 0.051832,
     "icon": "🇲🇽",
     "color": "#D44ED9",
-    "logo": null,
+    "logo": "/logos/mxnb-base.png",
     "verification": "full"
   },
   {
@@ -461,7 +461,7 @@
     "priceUsd": 0.775184,
     "icon": "🇸🇬",
     "color": "#4E73D9",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/0xdc3326e71d45186f113a2f448984ca0e8d201995/2760cd630b3618c3377eb43afdf0d227.png",
+    "logo": "/logos/xsgd-polygon.png",
     "verification": "full"
   },
   {
@@ -491,7 +491,7 @@
     "priceUsd": 1.31,
     "icon": "🇬🇧",
     "color": "#6CD94E",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/0x27f6c8289550fce67f6b50bed1f519966afe5287/7187f36f21b7a512c3a3e56788b8a69b.png",
+    "logo": "/logos/tgbp-polygon.png",
     "verification": "full"
   },
   {
@@ -506,7 +506,7 @@
     "priceUsd": 0.992401,
     "icon": "💵",
     "color": "#9F4ED9",
-    "logo": "https://static.debank.com/image/eth_token/logo_url/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409/9c61b134f82d8780005895d8fb6b19ab.png",
+    "logo": "/logos/fdusd-bnb.png",
     "verification": "full"
   },
   {
@@ -521,7 +521,7 @@
     "priceUsd": 1.0,
     "icon": "💵",
     "color": "#6AD94E",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+    "logo": "/logos/usdc-bnb.png",
     "verification": "full"
   },
   {
@@ -536,7 +536,7 @@
     "priceUsd": 0.999483,
     "icon": "💵",
     "color": "#4ED99A",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png",
+    "logo": "/logos/usdt-bnb.png",
     "verification": "full"
   },
   {
@@ -551,7 +551,7 @@
     "priceUsd": 0.999347,
     "icon": "💵",
     "color": "#D98F4E",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png",
+    "logo": "/logos/dai-polygon.png",
     "verification": "full"
   },
   {
@@ -566,7 +566,7 @@
     "priceUsd": 1.0,
     "icon": "💵",
     "color": "#6AD94E",
-    "logo": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+    "logo": "/logos/usdc-polygon.png",
     "verification": "full"
   },
   {
@@ -581,7 +581,7 @@
     "priceUsd": 0.995199,
     "icon": "💵",
     "color": "#6AD94E",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+    "logo": "/logos/usdc-base.png",
     "verification": "full"
   },
   {
@@ -596,7 +596,7 @@
     "priceUsd": 1.0,
     "icon": "💵",
     "color": "#4ED99A",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png",
+    "logo": "/logos/usdt-polygon.png",
     "verification": "full"
   },
   {
@@ -611,7 +611,7 @@
     "priceUsd": 545.2,
     "icon": "🪙",
     "color": "#D9A14E",
-    "logo": "https://assets.coingecko.com/coins/images/825/small/binance-coin-logo.png?1547034615",
+    "logo": "/logos/bnb-bnb.png",
     "verification": "full",
     "native": true
   },
@@ -627,7 +627,7 @@
     "priceUsd": 6.59,
     "icon": "🪙",
     "color": "#B9D94E",
-    "logo": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
+    "logo": "/logos/avax-avalanche.png",
     "verification": "full",
     "native": true
   },
@@ -643,7 +643,7 @@
     "priceUsd": 1678.96,
     "icon": "🪙",
     "color": "#D94E81",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+    "logo": "/logos/eth-base.png",
     "verification": "sell-only",
     "native": true,
     "sellOnly": true
@@ -660,7 +660,7 @@
     "priceUsd": 0.076044,
     "icon": "🪙",
     "color": "#73D94E",
-    "logo": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+    "logo": "/logos/pol-polygon.png",
     "verification": "full",
     "native": true
   },
@@ -676,7 +676,7 @@
     "priceUsd": 100.12,
     "icon": "🪙",
     "color": "#4ED9D9",
-    "logo": "https://static.debank.com/image/eth_token/logo_url/0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9/7baf403c819f679dc1c6571d9d978f21.png",
+    "logo": "/logos/aave-bnb.png",
     "verification": "full"
   },
   {
@@ -691,7 +691,7 @@
     "priceUsd": 59770.59,
     "icon": "🪙",
     "color": "#91D94E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c/6f9302fa889419e4ce8745931d2e19bf.png",
+    "logo": "/logos/btcb-bnb.png",
     "verification": "full"
   },
   {
@@ -706,7 +706,7 @@
     "priceUsd": 1.47,
     "icon": "🪙",
     "color": "#D9754E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82/9003539eb61139bd494b7412b785d482.png",
+    "logo": "/logos/cake-bnb.png",
     "verification": "full"
   },
   {
@@ -721,7 +721,7 @@
     "priceUsd": 0.054995,
     "icon": "🪙",
     "color": "#4E8FD9",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0xba2ae424d960c26247dd6c32edc70b295c744c43/5fb1f729987d700cd736b6990e164b50.png",
+    "logo": "/logos/doge-bnb.png",
     "verification": "full"
   },
   {
@@ -736,7 +736,7 @@
     "priceUsd": 0.65741,
     "icon": "🪙",
     "color": "#BB4ED9",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x7083609fce4d1d8dc0c979aab8c869ea2c873402/f88e88740fdbda3891500b30f6b35d89.png",
+    "logo": "/logos/dot-bnb.png",
     "verification": "full"
   },
   {
@@ -751,7 +751,7 @@
     "priceUsd": 8.58,
     "icon": "🪙",
     "color": "#D9AB4E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0xf8a0bf9cf54bb92f17374d9e9a321e6a111a51bd/69425617db0ef93a7c21c4f9b81c7ca5.png",
+    "logo": "/logos/link-bnb.png",
     "verification": "full"
   },
   {
@@ -766,7 +766,7 @@
     "priceUsd": 39.9,
     "icon": "🪙",
     "color": "#4ED983",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x4338665cbb7b2485a8855a139b75d5e34ab0db94/9a0694cd72dfd89199451484d93b635a.png",
+    "logo": "/logos/ltc-bnb.png",
     "verification": "full"
   },
   {
@@ -781,7 +781,7 @@
     "priceUsd": 70.13,
     "icon": "🪙",
     "color": "#6ED94E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x570a5d26f7765ecb712c0924e4de545b89fd43df/7c5db5c2eae571da837b65f5b9ae1a5c.png",
+    "logo": "/logos/sol-bnb.png",
     "verification": "full"
   },
   {
@@ -796,7 +796,7 @@
     "priceUsd": 0.304754,
     "icon": "🪙",
     "color": "#4E78D9",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0xce7de646e7208a4ef112cb6ed5038fa6cc6b12e3/dc0c451aa6c377c885cf5dc69eaaa9a3.png",
+    "logo": "/logos/trx-bnb.png",
     "verification": "full"
   },
   {
@@ -811,7 +811,7 @@
     "priceUsd": 0.317413,
     "icon": "🪙",
     "color": "#4ED98F",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x4b0f1812e5df2a09796481ff14017e6005508003/55d9888131510d7c8bdff5e7e2c0d871.png",
+    "logo": "/logos/twt-bnb.png",
     "verification": "full"
   },
   {
@@ -826,7 +826,7 @@
     "priceUsd": 4.72,
     "icon": "🪙",
     "color": "#91D94E",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0xbf5140a22578168fd562dccf235e5d43a02ce9b1/fcee0c46fc9864f48ce6a40ed1cdd135.png",
+    "logo": "/logos/uni-bnb.png",
     "verification": "full"
   },
   {
@@ -841,7 +841,7 @@
     "priceUsd": 0.924822,
     "icon": "🪙",
     "color": "#D74ED9",
-    "logo": "https://static.debank.com/image/bsc_token/logo_url/0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe/247c7c042eb1c707fe016a18163a0b79.png",
+    "logo": "/logos/xrp-bnb.png",
     "verification": "full"
   },
   {
@@ -856,7 +856,7 @@
     "priceUsd": 0.393345,
     "icon": "🪙",
     "color": "#4E50D9",
-    "logo": "https://static.debank.com/image/base_token/logo_url/0x940181a94a35a4569e4529a3cdfb74e38fd98631/bb455b8557be5d08ad67f4314f899e15.png",
+    "logo": "/logos/aero-base.png",
     "verification": "full"
   },
   {
@@ -871,7 +871,7 @@
     "priceUsd": 0.111335,
     "icon": "🪙",
     "color": "#60D94E",
-    "logo": "https://static.debank.com/image/coin/logo_url/arbitrum/854f629937ce94bebeb2cd38fb336de7.png",
+    "logo": "/logos/arb-arbitrum.png",
     "verification": "full"
   },
   {
@@ -886,7 +886,7 @@
     "priceUsd": 7.15,
     "icon": "🪙",
     "color": "#D94E98",
-    "logo": "https://static.debank.com/image/arb_token/logo_url/0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a/b4e362278f64a738b878e5393fa29837.png",
+    "logo": "/logos/gmx-arbitrum.png",
     "verification": "full"
   },
   {
@@ -901,7 +901,7 @@
     "priceUsd": 0.070235,
     "icon": "🪙",
     "color": "#834ED9",
-    "logo": "https://optimistic.etherscan.io/token/images/optimism_32.png",
+    "logo": "/logos/op-optimism.png",
     "verification": "full"
   },
   {
@@ -916,7 +916,7 @@
     "priceUsd": 1.28,
     "icon": "🪙",
     "color": "#4E73D9",
-    "logo": "https://static.debank.com/image/arb_token/logo_url/0x0c880f6761f1af8d9aa9c466984b80dab9a8c9e8/b9351f830cd0a6457e489b8c685f29ad.png",
+    "logo": "/logos/pendle-arbitrum.png",
     "verification": "full"
   },
   {
@@ -931,7 +931,7 @@
     "priceUsd": 0.377879,
     "icon": "🪙",
     "color": "#964ED9",
-    "logo": "https://static.debank.com/image/eth_token/logo_url/0x44ff8620b8ca30902395a7bd3f2407e1a091bf73/cbb70834d9442214c846833e47648255.png",
+    "logo": "/logos/virtual-base.png",
     "verification": "full"
   },
   {
@@ -946,7 +946,7 @@
     "priceUsd": 59892.63,
     "icon": "🪙",
     "color": "#4ED9A1",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
+    "logo": "/logos/wbtc-polygon.png",
     "verification": "full"
   },
   {
@@ -961,7 +961,7 @@
     "priceUsd": 1679.56,
     "icon": "🪙",
     "color": "#4E91D9",
-    "logo": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+    "logo": "/logos/weth-polygon.png",
     "verification": "full"
   },
   {
@@ -976,7 +976,7 @@
     "priceUsd": 59843.96,
     "icon": "🪙",
     "color": "#4EC2D9",
-    "logo": "https://static.debank.com/image/base_token/logo_url/0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf/a4ae837a6ca2fc45f07a74898cc4ba45.png",
+    "logo": "/logos/cbbtc-base.png",
     "verification": "full"
   }
 ]

@@ -1,3 +1,4 @@
+import AssetLogo from './AssetLogo';
 import React, { useState } from 'react';
 import { Asset } from '../types';
 import { X, ExternalLink, Copy, Check, ShieldCheck, ArrowRightLeft } from 'lucide-react';
@@ -45,29 +46,7 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
 
         {/* Hero Section */}
         <div className="text-center my-4">
-          <div
-            className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-3xl shadow-sm border border-slate-200/80 mb-3 bg-white overflow-hidden p-2"
-            style={{ backgroundColor: `${asset.color}12` }}
-          >
-            {asset.logoUrl ? (
-              <img
-                src={asset.logoUrl}
-                alt={asset.symbol}
-                className="w-full h-full object-contain rounded-full"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                  const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <span
-              className="items-center justify-center"
-              style={{ display: asset.logoUrl ? 'none' : 'flex' }}
-            >
-              {asset.icon}
-            </span>
-          </div>
+          <div className="mx-auto mb-3 w-16"><AssetLogo asset={asset} size={64} className="shadow-sm" /></div>
 
           <h3 className="text-xl font-extrabold text-slate-900 flex items-center justify-center gap-1.5">
             <span>{asset.name}</span>

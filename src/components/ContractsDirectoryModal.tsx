@@ -1,3 +1,4 @@
+import AssetLogo from './AssetLogo';
 import React, { useState } from 'react';
 import { Asset } from '../types';
 import { X, ExternalLink, Copy, Check, ShieldCheck } from 'lucide-react';
@@ -75,21 +76,7 @@ export const ContractsDirectoryModal: React.FC<ContractsDirectoryModalProps> = (
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-8 h-8 rounded-full bg-white border border-slate-200/80 overflow-hidden p-1 flex items-center justify-center shrink-0 shadow-sm"
-                    style={{ backgroundColor: `${asset.color}10` }}
-                  >
-                    {asset.logoUrl ? (
-                      <img
-                        src={asset.logoUrl}
-                        alt={asset.symbol}
-                        className="w-full h-full object-contain rounded-full"
-                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                      />
-                    ) : (
-                      <span className="text-xs">{asset.icon}</span>
-                    )}
-                  </div>
+                  <AssetLogo asset={asset} size={32} />
                   <div>
                     <div className="flex items-center gap-1.5">
                       <span className="font-bold text-slate-900 text-xs">{asset.name}</span>
