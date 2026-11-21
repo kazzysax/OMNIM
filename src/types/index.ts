@@ -23,6 +23,8 @@ export interface Asset {
   liquidityNote?: string;
   /** Token can be sold but not bought through the current routers. */
   sellOnly?: boolean;
+  /** A duplicate of another listed asset: hidden from pickers unless the user holds a balance (so funds never disappear). */
+  legacy?: boolean;
   /** Where the live price comes from; `snapshot` means the bundled fallback value is shown. */
   priceSource?: 'coingecko' | 'relay' | 'snapshot';
   /** Result of scripts/verify-assets.mjs: full = buy/sell/depth checked, buy-only = buy checked. */

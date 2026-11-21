@@ -45,6 +45,8 @@ flowchart LR
 
 ## Assets
 
+Each asset is listed once, on the chain and provider with the cheapest verified routing (USDC and USDT are the only exceptions and are offered on several chains). Duplicates of an asset that older versions listed (extra EUR, BTC, ETH, gold and USD tokens) stay hidden unless you already hold a balance, so no funds ever disappear from the wallet.
+
 Every asset below passes `npm run verify:assets`: the contract exists on-chain with matching decimals, and Relay and/or Li.Fi return a real quote at a low cost (see [Verification](#verification)). Tokens that did not route cheaply are **not** listed.
 
 ### Tokenized stocks and ETFs (BNB Chain)
@@ -79,7 +81,6 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 | Symbol | Name | Chain | Contract |
 | :-- | :-- | :-- | :-- |
 | `XAUt` | Tether Gold | BNB Chain | [`0x21cA…A3bf`](https://bscscan.com/token/0x21cAef8A43163Eea865baeE23b9C2E327696A3bf) |
-| `PAXG` | Paxos Gold | Arbitrum | [`0xfEb4…8429`](https://arbiscan.io/token/0xfEb4DfC8C4Cf7Ed305bb08065D08eC6ee6728429) |
 
 ### Currencies
 
@@ -89,22 +90,17 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 | `AUDF` | Forte AUD | Polygon | [`0xd2a5…456b`](https://polygonscan.com/token/0xd2a530170D71a9Cfe1651Fb468E2B98F7Ed7456b) |
 | `BRZ` | Brazilian Digital | Polygon | [`0x4eD1…75Dc`](https://polygonscan.com/token/0x4eD141110F6EeeAbA9A1df36d8c26f684d2475Dc) |
 | `EURC` | EURC | Base | [`0x60a3…db42`](https://basescan.org/token/0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42) |
-| `EURS` | STASIS EURS Token (PoS) | Polygon | [`0xE111…Ae99`](https://polygonscan.com/token/0xE111178A87A3BFf0c8d18DECBa5798827539Ae99) |
-| `EURe` | Monerium EURe | Polygon | [`0xE0aE…Ea8d`](https://polygonscan.com/token/0xE0aEa583266584DafBB3f9C3211d5588c73fEa8d) |
 | `JPYC` | JPY Coin | Polygon | [`0xE7C3…3c29`](https://polygonscan.com/token/0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29) |
 | `MXNB` | MXNB | Base | [`0xF197…80aA`](https://basescan.org/token/0xF197FFC28c23E0309B5559e7a166f2c6164C80aA) |
 | `XSGD` | XSGD | Polygon | [`0xDC33…1995`](https://polygonscan.com/token/0xDC3326e71D45186F113a2F448984CA0e8D201995) |
 | `XZAR` | South African Tether (PoS) | Polygon | [`0x30DE…33cB`](https://polygonscan.com/token/0x30DE46509Dbc3a491128F97be0aAf70dc7Ff33cB) |
-| `tGBP` | tGBP | Polygon | [`0x27f6…5287`](https://polygonscan.com/token/0x27f6c8289550fCE67f6B50BeD1F519966aFE5287) |
 
 ### Stablecoins
 
 | Symbol | Name | Chain | Contract |
 | :-- | :-- | :-- | :-- |
-| `FDUSD` | First Digital USD | BNB Chain | [`0xc5f0…6409`](https://bscscan.com/token/0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409) |
 | `USDC` | USD Coin (BNB Chain) | BNB Chain | [`0x8AC7…580d`](https://bscscan.com/token/0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d) |
 | `USDT` | Tether USD (BNB Chain) | BNB Chain | [`0x55d3…7955`](https://bscscan.com/token/0x55d398326f99059fF775485246999027B3197955) |
-| `DAI` | Dai | Polygon | [`0x8f3C…A063`](https://polygonscan.com/token/0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063) |
 | `USDC` | USD Coin | Polygon | [`0x3c49…3359`](https://polygonscan.com/token/0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359) |
 | `USDC` | USD Coin (Base) | Base | [`0x8335…2913`](https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) |
 | `USDT` | Tether USD | Polygon | [`0xc213…8e8F`](https://polygonscan.com/token/0xc2132D05D31c914a87C6611C10748AEb04B58e8F) |
@@ -115,7 +111,6 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 | :-- | :-- | :-- | :-- |
 | `BNB` | BNB | BNB Chain | native gas token |
 | `AVAX` | Avalanche | Avalanche | native gas token |
-| `ETH` ‡ | Ethereum | Base | native gas token |
 | `POL` | Polygon | Polygon | native gas token |
 | `AAVE` | Aave (BNB Chain) | BNB Chain | [`0xfb61…f802`](https://bscscan.com/token/0xfb6115445Bff7b52FeB98650C87f44907E58f802) |
 | `BTCB` | Bitcoin (BTCB) | BNB Chain | [`0x7130…ad9c`](https://bscscan.com/token/0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c) |
@@ -135,9 +130,7 @@ Issued by [Ondo Global Markets](https://ondo.finance/global-markets) (`…on` sy
 | `OP` | Optimism | OP Mainnet | [`0x4200…0042`](https://optimistic.etherscan.io/token/0x4200000000000000000000000000000000000042) |
 | `PENDLE` | Pendle | Arbitrum | [`0x0c88…c9e8`](https://arbiscan.io/token/0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8) |
 | `VIRTUAL` | Virtuals Protocol | Base | [`0x0b3e…7E1b`](https://basescan.org/token/0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b) |
-| `WBTC` | Wrapped Bitcoin | Polygon | [`0x1BFD…BfD6`](https://polygonscan.com/token/0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6) |
 | `WETH` | Wrapped Ether (Polygon) | Polygon | [`0x7ceB…f619`](https://polygonscan.com/token/0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619) |
-| `cbBTC` | Coinbase Wrapped BTC | Base | [`0xcbB7…33Bf`](https://basescan.org/token/0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf) |
 
 NIM (native Nimiq) is shown with balance and price. **Swaps to and from NIM are paused** while the Fastspot atomic-swap relayer is unavailable.
 

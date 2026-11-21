@@ -327,7 +327,8 @@
     "icon": "🥇",
     "color": "#9D4ED9",
     "logo": "/logos/paxg-arbitrum.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "tgbp-bnb",
@@ -402,7 +403,8 @@
     "icon": "🇪🇺",
     "color": "#AB4ED9",
     "logo": "/logos/eurs-polygon.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "eure-polygon",
@@ -417,7 +419,8 @@
     "icon": "🇪🇺",
     "color": "#D9D74E",
     "logo": "/logos/eure-polygon.svg",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "jpyc-polygon",
@@ -492,7 +495,8 @@
     "icon": "🇬🇧",
     "color": "#6CD94E",
     "logo": "/logos/tgbp-polygon.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "fdusd-bnb",
@@ -507,7 +511,8 @@
     "icon": "💵",
     "color": "#9F4ED9",
     "logo": "/logos/fdusd-bnb.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "usdc-bnb",
@@ -552,7 +557,8 @@
     "icon": "💵",
     "color": "#D98F4E",
     "logo": "/logos/dai-polygon.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "usdc-polygon",
@@ -646,7 +652,8 @@
     "logo": "/logos/eth-base.png",
     "verification": "sell-only",
     "native": true,
-    "sellOnly": true
+    "sellOnly": true,
+    "legacy": true
   },
   {
     "id": "pol-polygon",
@@ -947,12 +954,13 @@
     "icon": "🪙",
     "color": "#4ED9A1",
     "logo": "/logos/wbtc-polygon.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   },
   {
     "id": "weth-polygon",
     "symbol": "WETH",
-    "name": "Wrapped Ether (Polygon)",
+    "name": "Ethereum (WETH)",
     "category": "crypto",
     "group": "crypto",
     "chainId": 137,
@@ -977,6 +985,7 @@
     "icon": "🪙",
     "color": "#4EC2D9",
     "logo": "/logos/cbbtc-base.png",
-    "verification": "full"
+    "verification": "full",
+    "legacy": true
   }
 ]

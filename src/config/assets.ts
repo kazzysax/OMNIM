@@ -26,6 +26,7 @@ interface RegistryEntry {
   verification: 'full' | 'buy-only' | 'sell-only';
   native?: boolean;
   sellOnly?: boolean;
+  legacy?: boolean;
 }
 
 export const CHAINS: Record<number, { name: string; explorer: string }> = {
@@ -70,6 +71,7 @@ function toAsset(e: RegistryEntry): Asset {
     isVerified: true,
     hasSwapLiquidity: true,
     sellOnly: e.sellOnly,
+    legacy: e.legacy,
     verification: e.verification,
     priceSource: 'snapshot',
     explorerUrl,

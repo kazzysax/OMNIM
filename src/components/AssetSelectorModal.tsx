@@ -30,6 +30,8 @@ export const AssetSelectorModal: React.FC<AssetSelectorModalProps> = ({
 
   const filteredAssets = assets
     .filter((a) => a.id !== excludeAssetId)
+    // Duplicates stay selectable only while the user actually holds them (to sell or send).
+    .filter((a) => !a.legacy || a.userBalance > 0)
     .filter((a) => a.category === activeTab);
 
   return (
