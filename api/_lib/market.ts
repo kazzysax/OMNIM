@@ -78,7 +78,23 @@ async function getJson(url: string): Promise<any> {
 }
 
 /** Daily closes, oldest first. */
-async function fetchCloses(i: Instrument): Promise<{ closes: number[]; asOf: string }> {
+/** Yahoo tickers used when CoinGecko's free tier rate-limits us. */
+const YAHOO_FALLBACK: Record<string, string> = {
+  BTC: 'BTC-USD', ETH: 'ETH-USD', SOL: 'SOL-USD', BNB: 'BNB-USD', XRP: 'XRP-USD',
+  LINK: 'LINK-USD', AVAX: 'AVAX-USD', DOGE: 'DOGE-USD', AAVE: 'AAVE-USD',
+};
+
+async function fetchCloses(i: Instrument): Promise<{ closes: number[]; asOf: string; via: Instrument['source'] }> {
+  try {
+    return { ...(await fetchFromSource(i)), via: i.source };
+  } catch (e) {
+    const alt = i.source === 'coingecko' ? YAHOO_FALLBACK[i.symbol] : undefined;
+    if (!alt) throw e;
+    return { ...(await fetchFromSource({ ...i, source: 'yahoo', ref: alt })), via: 'yahoo' };
+  }
+}
+
+async function fetchFromSource(i: Instrument): Promise<{ closes: number[]; asOf: string }> {
   if (i.source === 'yahoo') {
     const json = await getJson(
       `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(i.ref)}?range=1y&interval=1d`
@@ -104,13 +120,13 @@ const retOver = (c: number[], days: number) => (c.length > days ? c[c.length - 1
 const avg = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
 const round = (v: number | null, d = 4) => (v === null || !isFinite(v) ? null : Number(v.toFixed(d)));
 
-export function computeStats(i: Instrument, closes: number[], asOf: string): Stats {
+export function computeStats(i: Instrument, closes: number[], asOf: string, via: Instrument['source'] = i.source): Stats {
   const price = closes[closes.length - 1];
   const logRets = closes.slice(1).map((v, k) => Math.log(v / closes[k]));
   const mean = avg(logRets);
   const sd = Math.sqrt(avg(logRets.map((r) => (r - mean) ** 2)));
   // Stocks trade ~252 days a year, crypto and tokenised gold every day.
-  const volAnn = sd * Math.sqrt(i.source === 'yahoo' ? 252 : 365);
+  const volAnn = sd * Math.sqrt(i.kind === 'stock' || i.kind === 'etf' ? 252 : 365);
 
   let peak = closes[0];
   let maxDD = 0;
@@ -133,7 +149,7 @@ export function computeStats(i: Instrument, closes: number[], asOf: string): Sta
     symbol: i.symbol,
     name: i.name,
     kind: i.kind,
-    source: i.source === 'yahoo' ? 'Yahoo Finance' : 'CoinGecko',
+    source: via === 'yahoo' ? 'Yahoo Finance' : 'CoinGecko',
     asOf,
     price: round(price, 4)!,
     ret7d: round(retOver(closes, 7)),
@@ -182,8 +198,8 @@ async function build() {
       for (let attempt = 0; attempt < 3 && !done; attempt++) {
         try {
           if (attempt > 0) await new Promise((r) => setTimeout(r, 2500 * attempt));
-          const { closes, asOf } = await fetchCloses(i);
-          data.push(computeStats(i, closes, asOf));
+          const { closes, asOf, via } = await fetchCloses(i);
+          data.push(computeStats(i, closes, asOf, via));
           done = true;
         } catch {
           /* retry */
