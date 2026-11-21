@@ -72,3 +72,20 @@
     transform: translateY(0);
   }
 }
+
+/* OMNIM AI launcher eyes: blink + glance around */
+@keyframes omnimEyeBlink {
+  0%, 44%, 50%, 92%, 96%, 100% { transform: scaleY(1); }
+  47%, 94% { transform: scaleY(0.1); }
+}
+@keyframes omnimEyeLook {
+  0%, 20% { transform: translateX(0); }
+  28%, 42% { transform: translateX(-1.5px); }
+  52%, 66% { transform: translateX(1.5px); }
+  74%, 100% { transform: translateX(0); }
+}
+.omnim-eyes { animation: omnimEyeLook 6s ease-in-out infinite; }
+.omnim-eye { animation: omnimEyeBlink 4s ease-in-out infinite; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .omnim-eyes, .omnim-eye { animation: none; }
+}

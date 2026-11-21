@@ -180,8 +180,14 @@ export default function OmnimAI() {
           className="fixed z-40 rounded-full bg-black p-[3px] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.45)] ring-2 ring-omnim-gold/70 select-none cursor-grab active:cursor-grabbing active:scale-95 transition-transform"
         >
           <img src="/omnim-logo.png" alt="" draggable={false} className="w-full h-full rounded-full object-cover pointer-events-none" />
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark flex items-center justify-center ring-2 ring-white">
-            <Sparkles size={11} className="text-black" />
+          <span className="absolute -top-1.5 -right-1.5 w-[26px] h-[26px] rounded-full bg-gradient-to-br from-omnim-goldLight to-omnim-goldDark flex items-center justify-center ring-2 ring-white">
+            <span className="omnim-eyes flex items-center gap-[4px] mt-[1px]">
+              {[0, 1].map((k) => (
+                <span key={k} className="omnim-eye relative block w-[6px] h-[8px] rounded-[45%] bg-black">
+                  <span className="absolute top-[1px] right-[1px] w-[2px] h-[2px] rounded-full bg-white" />
+                </span>
+              ))}
+            </span>
           </span>
         </button>
       )}
