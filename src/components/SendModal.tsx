@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Asset, WalletState } from '../types';
 import { executeNimTransfer, executeEvmTransaction, waitForEvmReceipt } from '../services/nimiqWallet';
-import { toAtomicUnits } from '../services/relay';
+import { toAtomicUnits } from '../services/routing';
 import { X, CheckCircle2, ChevronDown, Clock, AlertCircle } from 'lucide-react';
 import { AssetSelectorModal } from './AssetSelectorModal';
 
