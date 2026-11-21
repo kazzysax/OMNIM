@@ -254,8 +254,6 @@ export default function App() {
     0
   );
 
-  const nimAsset = assets.find((a) => a.symbol === 'NIM');
-  const nimBalance = nimAsset ? nimAsset.userBalance : wallet.nimiqBalanceLuna / 100000;
 
   const handleSwapSuccess = (
     fromAsset: Asset,
@@ -403,7 +401,6 @@ export default function App() {
               <HeroBalanceCard
                 wallet={wallet}
                 totalBalanceUsd={totalPortfolioValueUsd}
-                nimBalance={nimBalance}
                 onOpenReceive={() => setIsReceiveOpen(true)}
                 onOpenSend={() => setIsSendOpen(true)}
                 onOpenSwap={() => {

@@ -6,7 +6,6 @@ import { Header } from './Header';
 interface HeroBalanceCardProps {
   wallet: WalletState;
   totalBalanceUsd: number;
-  nimBalance: number;
   onOpenReceive: () => void;
   onOpenSend: () => void;
   onOpenSwap: () => void;
@@ -18,7 +17,6 @@ interface HeroBalanceCardProps {
 export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
   wallet,
   totalBalanceUsd,
-  nimBalance,
   onOpenReceive,
   onOpenSend,
   onOpenSwap,
@@ -48,7 +46,6 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
           ${totalBalanceUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>
         <div className="flex items-center justify-center gap-1.5 mt-1 text-xs text-slate-400 font-medium">
-          <span>{nimBalance > 0 ? nimBalance.toFixed(2) : '0.00'} NIM</span>
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
