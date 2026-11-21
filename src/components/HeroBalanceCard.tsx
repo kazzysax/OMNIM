@@ -1,7 +1,6 @@
 import React from 'react';
 import { WalletState } from '../types';
 import { ArrowDownLeft, ArrowUpRight, Plus, ChevronDown, RotateCcw } from 'lucide-react';
-import { Header } from './Header';
 
 interface HeroBalanceCardProps {
   wallet: WalletState;
@@ -26,11 +25,8 @@ export const HeroBalanceCard: React.FC<HeroBalanceCardProps> = ({
 }) => {
   return (
     <div className="mx-4 mt-2 mb-3 rounded-[36px] bg-[#1C1C1E] text-white shadow-xl overflow-hidden pb-5">
-      {/* Integrated Top Row Header */}
-      <Header onOpenWalletDetails={onOpenWalletDetails} />
-
       {/* Wallet Dropdown Selector */}
-      <div className="flex justify-center mt-1 mb-2">
+      <div className="flex justify-center pt-6 mb-2">
         <button
           onClick={onOpenWalletDetails}
           className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
