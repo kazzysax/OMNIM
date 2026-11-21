@@ -79,6 +79,8 @@ export default function App() {
   const [discoveredAssets, setDiscoveredAssets] = useState<Asset[]>(getInitialDiscoveredAssets);
 
   const isRefreshingRef = useRef(false);
+  const pricesBusyRef = useRef(false);
+  const discoveryBusyRef = useRef(false);
   const lastPriceFetchRef = useRef<number>(0);
   const lastFullPriceFetchRef = useRef<number>(0);
   const assetsRef = useRef<Asset[]>([]);
@@ -89,10 +91,10 @@ export default function App() {
     // Initial fetch
     refreshWalletAndBalances();
 
-    // Regular polling every 25 seconds for snappy updates without network socket congestion or RPC rate-limiting
+    // Regular polling every 10 seconds for snappy updates without network socket congestion or RPC rate-limiting
     const timer = setInterval(() => {
       refreshWalletAndBalances();
-    }, 25000);
+    }, 10000);
 
     // Instant refresh when window or mobile app resumes / focused
     const handleFocus = () => refreshWalletAndBalances();
@@ -134,6 +136,53 @@ export default function App() {
       const state = await connectDualWallet();
       setWallet(state);
 
+      // 2. Native NIM balance
+      setAssets((prev) =>
+        prev.map((asset) => {
+          if (asset.symbol !== 'NIM') return asset;
+          if (!state.nimiqAddress) return { ...asset, userBalance: 0 };
+          const currentNim = state.nimiqBalanceLuna / 100000;
+          // Keep the last known balance through transient network hiccups until consensus is confirmed.
+          const balance = currentNim > 0 ? currentNim : asset.userBalance > 0 && !state.isConsensusEstablished ? asset.userBalance : currentNim;
+          return { ...asset, userBalance: balance };
+        })
+      );
+
+      // 3. EVM balances: one batched Multicall3 request per chain.
+      if (!state.evmAddress) {
+        setAssets((prev) => prev.map((asset) => (asset.chainId > 0 ? { ...asset, userBalance: 0 } : asset)));
+      } else {
+        const owner = state.evmAddress;
+        const evmAssets = INITIAL_ASSETS.filter((a) => a.chainId > 0 && a.contractAddress);
+        const chainIds = Array.from(new Set(evmAssets.map((a) => a.chainId)));
+        // Apply each chain as soon as it answers instead of waiting for the slowest one.
+        await Promise.all(
+          chainIds.map(async (chainId) => {
+            const result = await fetchChainBalances(chainId, owner, evmAssets.filter((a) => a.chainId === chainId));
+            // Assets missing from a result (failed call or RPC outage) keep their previous balance.
+            if (!result) return;
+            setAssets((prev) =>
+              prev.map((asset) => (asset.id in result ? { ...asset, userBalance: result[asset.id] } : asset))
+            );
+          })
+        );
+      }
+
+      // Prices and token discovery are slower and don't block balances.
+      void refreshPrices();
+      void discoverTokens(state.evmAddress);
+    } catch (e) {
+      console.warn('Refresh error:', e);
+    } finally {
+      setIsRefreshing(false);
+      isRefreshingRef.current = false;
+    }
+  };
+
+  const refreshPrices = async () => {
+    if (pricesBusyRef.current) return;
+    pricesBusyRef.current = true;
+    try {
       // 1. Live prices: held assets every 2 min, the whole catalog every 5 min.
       const nowMs = Date.now();
       const catalog = assetsRef.current;
@@ -155,38 +204,18 @@ export default function App() {
           );
         }
       }
+    } catch (e) {
+      console.warn('Price refresh error:', e);
+    } finally {
+      pricesBusyRef.current = false;
+    }
+  };
 
-      // 2. Native NIM balance
-      setAssets((prev) =>
-        prev.map((asset) => {
-          if (asset.symbol !== 'NIM') return asset;
-          if (!state.nimiqAddress) return { ...asset, userBalance: 0 };
-          const currentNim = state.nimiqBalanceLuna / 100000;
-          // Keep the last known balance through transient network hiccups until consensus is confirmed.
-          const balance = currentNim > 0 ? currentNim : asset.userBalance > 0 && !state.isConsensusEstablished ? asset.userBalance : currentNim;
-          return { ...asset, userBalance: balance };
-        })
-      );
-
-      // 3. EVM balances: one batched Multicall3 request per chain.
-      if (!state.evmAddress) {
-        setAssets((prev) => prev.map((asset) => (asset.chainId > 0 ? { ...asset, userBalance: 0 } : asset)));
-      } else {
-        const owner = state.evmAddress;
-        const evmAssets = INITIAL_ASSETS.filter((a) => a.chainId > 0 && a.contractAddress);
-        const chainIds = Array.from(new Set(evmAssets.map((a) => a.chainId)));
-        const perChain = await Promise.all(
-          chainIds.map((chainId) =>
-            fetchChainBalances(chainId, owner, evmAssets.filter((a) => a.chainId === chainId))
-          )
-        );
-        // Assets missing from a result (failed call or RPC outage) keep their previous balance.
-        const balances: Record<string, number> = Object.assign({}, ...perChain.map((r) => r ?? {}));
-        setAssets((prev) =>
-          prev.map((asset) => (asset.id in balances ? { ...asset, userBalance: balances[asset.id] } : asset))
-        );
-      }
-
+  const discoverTokens = async (evmAddress: string | null) => {
+    if (discoveryBusyRef.current) return;
+    discoveryBusyRef.current = true;
+    try {
+      const state = { evmAddress };
       // 4. Auto-discover new tokens not in the predefined list (throttled to every 3 mins to avoid network congestion)
       const nowTs = Date.now();
       if (state.evmAddress && nowTs - lastDiscoveryRef.current > 180000) {
@@ -230,12 +259,14 @@ export default function App() {
           console.warn('Token discovery error:', e);
         }
       }
-    } catch (e) {
-      console.warn('Refresh error:', e);
     } finally {
-      setIsRefreshing(false);
-      isRefreshingRef.current = false;
+      discoveryBusyRef.current = false;
     }
+  };
+
+  /** After a swap/send, poll until the chain reflects it (bridges can take a while). */
+  const refreshAfterTx = () => {
+    [1500, 5000, 12000, 25000].forEach((ms) => setTimeout(() => refreshWalletAndBalances(), ms));
   };
 
   // Combine assets and discovered tokens for portfolio calculation
@@ -317,7 +348,7 @@ export default function App() {
     });
 
     // Fast sync after swap
-    setTimeout(() => refreshWalletAndBalances(), 2500);
+    refreshAfterTx();
   };
 
   const handleSendSuccess = (
@@ -364,7 +395,7 @@ export default function App() {
     });
 
     // Fast sync after send
-    setTimeout(() => refreshWalletAndBalances(), 2000);
+    refreshAfterTx();
   };
 
   const handleSelectAssetForSwap = (asset: Asset) => {
